@@ -2,16 +2,13 @@ import { DoubleSide } from 'three'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import NavCube from './NavCube'
+import CameraResetListener from './CameraResetListener'
+import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 
 // UI-SPEC Dominant / Secondary tones — kept in sync with the DOM background (index.css)
 // so the WebGL canvas and the surrounding page chrome don't clash (D-06).
 const DOMINANT_TONE = '#FAFAFA'
 const SECONDARY_TONE = '#E4E7EB'
-
-// Default camera framing: the rail runs ~3m along X and the robot stands ~1.5m
-// tall, so the camera sits back and slightly elevated to hold the whole rig
-// with comfortable margin. Plan 01-04 mounts the rail rig at the origin.
-const DEFAULT_CAMERA_POSITION: [number, number, number] = [3.5, 2.5, 4.5]
 
 /**
  * R3F Canvas composition root — the phase's "one real route" analogue.
@@ -51,8 +48,9 @@ export default function CellScene() {
         {/* Rail rig + UR3e mount point — inserted by plan 01-04 */}
         <group name="rail-rig-mount" />
 
-        <OrbitControls makeDefault />
+        <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />
+        <CameraResetListener />
       </Canvas>
     </div>
   )
