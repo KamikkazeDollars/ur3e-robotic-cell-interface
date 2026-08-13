@@ -5,12 +5,12 @@ milestone_name: milestone
 current_phase: 2
 current_phase_name: G-code Import + Static Toolpath
 status: planning
-stopped_at: Phase 1 complete — UAT passed, security threat-secure (threats_open: 0), transitioned to Phase 2
-last_updated: "2026-08-13T17:50:03.339Z"
+stopped_at: Phase 2 context gathered
+last_updated: "2026-08-13T18:12:45.431Z"
 last_activity: 2026-08-13
 last_activity_desc: Roadmap created (8 phases, 25/25 v1 requirements mapped)
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
   total_plans: 4
   completed_plans: 4
@@ -106,6 +106,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T17:50:03.339Z
-Stopped at: Phase 1 complete, ready to plan Phase 2 — g-code-import-static-toolpath
-Resume file: None
+Last session: 2026-08-13T18:12:45.415Z
+Stopped at: Phase 2 context gathered
+Resume file: .planning/phases/02-g-code-import-static-toolpath/02-CONTEXT.md
