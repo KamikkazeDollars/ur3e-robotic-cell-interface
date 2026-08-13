@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { forwardKinematics, isWithinJointLimits } from './forward-kinematics';
 import { UR3E_HOME_POSE, UR3E_READY_POSE, type JointAngles } from './ur3e-dh';
+import { RAIL_TRAVEL } from './rail';
 
 describe('forwardKinematics', () => {
   it('matches the known home-pose (all-zero joints) TCP position', () => {
@@ -68,5 +69,11 @@ describe('forwardKinematics', () => {
     expect(isWithinJointLimits(UR3E_READY_POSE)).toBe(true);
     const nonZeroCount = UR3E_READY_POSE.filter((v) => v !== 0).length;
     expect(nonZeroCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it('agrees with RAIL_TRAVEL on what "travel" means end-to-end', () => {
+    const atMax = forwardKinematics(UR3E_HOME_POSE, RAIL_TRAVEL.max).tcpPosition.x;
+    const atMin = forwardKinematics(UR3E_HOME_POSE, RAIL_TRAVEL.min).tcpPosition.x;
+    expect(atMax - atMin).toBeCloseTo(RAIL_TRAVEL.max - RAIL_TRAVEL.min, 5);
   });
 });
