@@ -34,7 +34,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User sees a Fusion-360-style navigation cube showing Front/Top/Bottom/Back presets that rotates in sync with the camera, and clicking a face snaps the camera to that view
   4. User sees the UR3e, including its 7th external linear-rail axis, rendered at a correct pose derived from its DH-parameter kinematic model (forward kinematics unit-tested against a known reference pose)
   5. Project source is on GitHub and the latest working build is live at a publicly reachable URL
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold, deploy to GitHub + Vercel, and render the interactive nav-cube-driven 3D cell (SCENE-01, SCENE-03, DEPLOY-01, DEPLOY-02)
+- [ ] 01-02-PLAN.md — DH-parameter forward kinematics and 7th-axis rail geometry, unit-tested against the reference home pose (SCENE-04, math half)
+- [ ] 01-03-PLAN.md — shadcn/ui design-system layer, UI-SPEC token contract, and the one-action camera reset (SCENE-02)
+- [ ] 01-04-PLAN.md — UR3e URDF + meshes rendered on the visible 7th-axis rail at the kinematics-derived ready pose (SCENE-04, rendering half; DEPLOY-02 re-verified)
+
 **UI hint**: yes
 
 ### Phase 2: G-code Import + Static Toolpath
@@ -120,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Static Rig + Kinematics Foundation | 0/? | Not started | - |
+| 1. Static Rig + Kinematics Foundation | 0/4 | Planned | - |
 | 2. G-code Import + Static Toolpath | 0/? | Not started | - |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 0/? | Not started | - |
 | 4. Playback Engine | 0/? | Not started | - |
