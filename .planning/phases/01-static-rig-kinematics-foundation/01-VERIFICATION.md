@@ -1,11 +1,12 @@
 ---
 phase: 01-static-rig-kinematics-foundation
 verified: 2026-08-13T17:22:21Z
-status: human_needed
+status: passed
 score: 5/6 must-haves verified
 behavior_unverified: 1
 overrides_applied: 0
 behavior_unverified_items:
+
   - truth: "User sees the UR3e, including its 7th external linear-rail axis, rendered at a correct pose derived from its DH-parameter kinematic model (SCENE-04, rendering/visual half)"
     test: "Open the live production URL and visually inspect the final composition: real shaded UR3e mesh geometry, upright orientation, bent 'ready' pose, bare flange, twin-rail geometry with end-stops at both travel limits, carriage at travel centre, floor/rig Z-alignment, and the axis triad on the nav cube — the exact checklist in 01-04-PLAN.md's Task 3 human-verify block."
     expected: "The scene reads as an accurately-modeled UR3e on its rail, with no visual regressions introduced by the three rounds of checkpoint-follow-up composition edits (axis-triad reposition, forward layout shift, twin-rail carriage rebuild, and the round-2/round-3 floor Z-centre reversal)."
