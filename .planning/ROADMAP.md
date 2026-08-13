@@ -72,12 +72,12 @@ Plans:
 
 *Scope note: "upload" is scoped to curated, bundled sample files for this phase per locked decision D-01 (02-CONTEXT.md) — no file-upload UI is built.*
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Tracer: pick a bundled sample and see its colour/dash-coded toolpath anchored in the cell, with the production build proving the parser stack (SIM-01, SIM-02)
+- [x] 02-01-PLAN.md — Tracer: pick a bundled sample and see its colour/dash-coded toolpath anchored in the cell, with the production build proving the parser stack (SIM-01, SIM-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -179,7 +179,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
-| 2. G-code Import + Static Toolpath | 0/3 | Planned      | - |
+| 2. G-code Import + Static Toolpath | 1/3 | In Progress|  |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 0/? | Not started | - |
 | 4. Playback Engine | 0/? | Not started | - |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
