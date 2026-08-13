@@ -1,7 +1,7 @@
 ---
 phase: 1
 slug: static-rig-kinematics-foundation
-status: draft
+status: verified
 shadcn_initialized: false
 preset: neutral (default — CSS variables enabled)
 created: 2026-08-13
@@ -109,8 +109,11 @@ Applicable state considerations resolved: 3 covered, 0 backstop, 0 unresolved (4
 - **loading** — Reset View button / nav-cube (interactive-control): both are synchronous, local Three.js camera transforms (`OrbitControls.reset()` / `tweenCamera`) with no network or async data dependency; no loading state exists to design.
 - **error** — Reset View button / nav-cube (interactive-control): deterministic client-side camera operations with no failure mode (no network call, no data validation that can reject).
 - **long-text** — Reset View button label / nav-cube face labels (interactive-control): all labels are fixed, short, developer-authored strings ("Reset View", "FRONT"/"TOP"/"BOTTOM"/"BACK"/"LEFT"/"RIGHT"), never user-generated or dynamically sized — no truncation/wrapping risk exists.
+- **overflow** — Reset View button / nav-cube (interactive-control): both are fixed-size elements with fixed short labels — no dynamic/variable content exists that could exceed their container. Confirmed via the deterministic UI-consideration probe cross-check (Step 9.5).
 
 No `nav`, `form`, or `list-collection` elements exist in Phase 1's UI surface (tab bar, operations tree, and g-code upload form are later-phase scope per `ROADMAP.md`), so their associated consideration categories were not raised this phase.
+
+**Probe cross-check (Step 9.5):** The deterministic ui-consideration-probe engine was run against this phase's three UI elements as a recall check on the manual classification above. It confirmed the loading/error/long-text dismissals for the interactive controls and additionally surfaced `overflow` (dismissed above) and flagged the 3D scene element as `unclassified` (a manual-review nudge, not a hard block) — reviewed and confirmed the existing loading/error/populated/empty coverage is sufficient for this phase's view-only scene.
 
 ---
 
@@ -127,11 +130,11 @@ No third-party registries were requested or declared for this phase. The loading
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-08-13
