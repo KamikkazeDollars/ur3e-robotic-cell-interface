@@ -12,14 +12,14 @@ The 3D toolpath simulation must work flawlessly end-to-end: import g-code → se
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ User can view the UR3e cell in an interactive 3D scene — Phase 1 (official UR3e model + 7th-axis rail rig rendered, DH-derived ready pose)
+- ✓ User can orbit/pan/zoom the 3D camera, and reset the camera to center on the robot cell — Phase 1
+- ✓ User sees a Fusion-360-style navigation cube (Front/Top/Bottom/Back views) in the 3D viewport that rotates in sync with the camera — Phase 1
+- ✓ Project is version-controlled on GitHub and deployed to a publicly reachable URL — Phase 1
 
 ### Active
 
 - [ ] User can import/upload a g-code file and have the system auto-generate the corresponding toolpath
-- [ ] User can view the UR3e cell in an interactive 3D scene
-- [ ] User can orbit/pan/zoom the 3D camera, and reset the camera to center on the robot cell
-- [ ] User sees a Fusion-360-style navigation cube (Front/Top/Bottom/Back views) in the 3D viewport that rotates in sync with the camera
 - [ ] User can start playback of the simulated toolpath and watch the robot follow it in real time
 - [ ] Toolpath lines are color-coded by move type (joint move vs. linear move)
 - [ ] For milling operations, the toolpath line changes color while the tool is in contact with the work body (e.g. cutting a hole), reflecting depth of engagement
@@ -68,8 +68,9 @@ The 3D toolpath simulation must work flawlessly end-to-end: import g-code → se
 | Simulation-only for v1, no live robot connection | User confirmed sim-only; real hardware connection explicitly deferred | — Pending |
 | Keep both Optimization and Calibrate tabs in v1 | User confirmed both wanted; Optimization to be expanded via research | — Pending |
 | G-code import drives toolpath generation | Unchanged from the original brief | — Pending |
-| Web app (browser-based) platform | User chose web app over desktop app | — Pending |
-| Prioritize 3D toolpath simulation as the must-nail centerpiece | Tight few-day timeline; user named this as the one thing that must impress | — Pending |
+| Web app (browser-based) platform | User chose web app over desktop app | ✓ Confirmed — live on Vercel, Phase 1 |
+| Prioritize 3D toolpath simulation as the must-nail centerpiece | Tight few-day timeline; user named this as the one thing that must impress | On track — 3D foundation (robot, rail, camera) shipped Phase 1 |
+| Rail carriage parked at travel centre for the static Phase 1 pose, but rig positioned near the floor's front (camera-side) edge with extra floor depth behind it | Keeps rail travel visible in both directions while composing the scene so the rig doesn't read as centred/floating on an oversized floor | ✓ Shipped — Phase 1 (4 rounds of live-URL composition iteration) |
 
 ## Evolution
 
@@ -89,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-13 after initialization*
+*Last updated: 2026-08-13 after Phase 1: static-rig-kinematics-foundation*

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: static-rig-kinematics-foundation
-status: executing
-stopped_at: Completed 01-04-PLAN.md (Phase 1 complete, pending final live-URL sign-off on checkpoint-follow-up composition changes)
-last_updated: "2026-08-13T17:16:06.201Z"
+current_phase: 2
+current_phase_name: G-code Import + Static Toolpath
+status: planning
+stopped_at: Phase 1 complete — UAT passed, security threat-secure (threats_open: 0), transitioned to Phase 2
+last_updated: "2026-08-13T17:50:03.339Z"
 last_activity: 2026-08-13
 last_activity_desc: Roadmap created (8 phases, 25/25 v1 requirements mapped)
 progress:
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-13)
 
 **Core value:** The 3D toolpath simulation must work flawlessly end-to-end: import g-code → see it rendered as an accurately color-coded, animated robot motion in the 3D cell.
-**Current focus:** Phase 01 — static-rig-kinematics-foundation
+**Current focus:** Phase 2 — g-code-import-static-toolpath
 
 ## Current Position
 
-Phase: 01 (static-rig-kinematics-foundation) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-08-13 — Phase 01 execution started
+Phase: 2 — G-code Import + Static Toolpath
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-13 — Phase 01 complete, transitioned to Phase 2
 
 Progress: [██████████] 100%
 
@@ -38,7 +38,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 4
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -46,7 +46,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -81,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Checkpoint follow-up (2 rounds, user-directed, confirmed no later phase owns scene composition): axis triad on nav cube (verified GizmoViewcube face order from installed source), rig+robot shifted forward off world origin, footprint-sized asymmetric floor (front-positioned, not centered), twin-rail carriage geometry
 - [Phase ?]: Investigated a reported floor/rig Z mismatch via three empirical methods (three.js matrixWorld simulation, full nested-group scene-graph reconstruction with forwardKinematics data, and DAE mesh matrix inspection) before concluding no coordinate bug existed and fixing the underlying design (floor's own asymmetric Z center) instead of chasing a nonexistent bug
 - [Phase ?]: Checkpoint follow-up round 3: user reviewed round 2's asymmetric floor and explicitly requested the floor share the exact same Z as the rig after all; reverted to the simple symmetric design the round-2 empirical investigation had already proven correct
+- [Phase 1]: Checkpoint follow-up round 4 (raised during UAT sign-off): user clarified — via a top-down diagram — that round 3's "same Z" fix wasn't what was wanted after all; the rig should sit near the floor's front edge with extra floor depth behind it. Re-confirmed and re-implemented directly (round 2's original math, now deliberately chosen rather than reverted) instead of routing through the full diagnose/gap-closure pipeline, since the change was fully specified by the user's confirmation.
+- [Phase 1]: Phase 1 UAT passed 1/1 (live-URL visual sign-off, post round-4 fix); code review found 0 critical / 2 warning / 2 info (non-functional ESLint config, missing StrictMode cleanup guard on the async URDF load — logged, not blocking); security review closed all 14 phase-1 threats (threats_open: 0) via the plan-time STRIDE registers, no auditor spawn needed under the ASVS L1 short-circuit rule.
 
 ### Pending Todos
 
@@ -88,8 +90,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: Exact UR3e joint-limit values and DH parameters need to be pulled from Universal Robots' official docs during implementation, not assumed (research gap).
 - [Phase 3]: Closed-form IK algorithm and 7th-axis rail redundancy-resolution heuristic are architecturally decided but not yet validated against actual UR3e DH values — flagged for a research/validation pass before/during planning.
+- [Phase 2+]: Code review flagged a non-functional ESLint setup (no `eslint.config.js` despite ESLint/typescript-eslint being installed and CLAUDE.md mandating it) and a missing cleanup guard on `RobotModel.tsx`'s async URDF load under React StrictMode. Non-blocking; worth fixing early in Phase 2 before more scene code accumulates. See `01-REVIEW.md`.
 
 ## Deferred Items
 
@@ -104,6 +106,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T17:12:23.405Z
-Stopped at: Completed 01-04-PLAN.md (Phase 1 complete, pending final live-URL sign-off on checkpoint-follow-up composition changes)
+Last session: 2026-08-13T17:50:03.339Z
+Stopped at: Phase 1 complete, ready to plan Phase 2 — g-code-import-static-toolpath
 Resume file: None
