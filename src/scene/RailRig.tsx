@@ -60,40 +60,24 @@ export const RIG_FOOTPRINT_WIDTH = TRACK_LENGTH + 2 * ROBOT_REACH_ENVELOPE + 2 *
  */
 export const RIG_Z_OFFSET = ROBOT_REACH_ENVELOPE
 
-// --- Floor asymmetry (checkpoint follow-up, round 2 — item 2) ------------
+// --- Floor sizing (checkpoint follow-up, round 3 — item 2) ----------------
 //
-// Round 1 gave the floor the SAME Z position as the rig (both at
-// RIG_Z_OFFSET) with a depth symmetric around that shared point. Empirical
-// verification (a full three.js scene-graph simulation reconstructing this
-// exact nested-group hierarchy, matrixWorld-composed, plus the DH-derived
-// ready-pose frame positions and a check of the shipped mesh files' own
-// internal transforms for a hidden translation) found NO coordinate bug —
-// the floor and the rig+robot bounding box are both provably centred on
-// RIG_Z_OFFSET (delta = 0.0000). What that symmetric floor actually
-// produces, though, is the rig sitting dead-centre ON its own floor — which
-// contradicts the "front edge of the layout, not centred" composition
-// intent from the previous round. The floor's OWN centre must therefore sit
-// further back than the rig, not at the same point: a small margin between
-// the rig and the floor's near (camera-side) edge, and additional depth
-// behind it.
-const FLOOR_FRONT_MARGIN = FOOTPRINT_MARGIN // small breathing room, near-camera side
-const FLOOR_BACK_MARGIN = FOOTPRINT_MARGIN + ROBOT_REACH_ENVELOPE // extra background depth so the rig reads as front-positioned, not centred on its own floor
+// The floor's own Z centre matches the rig's Z position exactly
+// (RIG_Z_OFFSET), per explicit instruction: rail+robot and the floor sit at
+// the same Z. Depth is symmetric around that shared centre — the reach
+// envelope plus a margin on each side.
+const FLOOR_HALF_DEPTH = ROBOT_REACH_ENVELOPE + FOOTPRINT_MARGIN
 
-const FLOOR_FRONT_HALF_DEPTH = ROBOT_REACH_ENVELOPE + FLOOR_FRONT_MARGIN
-const FLOOR_BACK_HALF_DEPTH = ROBOT_REACH_ENVELOPE + FLOOR_BACK_MARGIN
-
-/** Total floor depth (front + back halves) — asymmetric around the rig's
- * own Z position, not a simple doubled half-depth (checkpoint follow-up,
- * item 2). */
-export const RIG_FOOTPRINT_DEPTH = FLOOR_FRONT_HALF_DEPTH + FLOOR_BACK_HALF_DEPTH
+/** Total floor depth, symmetric around the rig's own Z position
+ * (checkpoint follow-up, round 3, item 2). */
+export const RIG_FOOTPRINT_DEPTH = 2 * FLOOR_HALF_DEPTH
 
 /**
- * The floor plane's own Z centre — deliberately NOT equal to `RIG_Z_OFFSET`.
- * It sits behind the rig by half the front/back asymmetry, so the rig
- * visually reads as positioned toward the floor's front edge rather than
- * centred on it (checkpoint follow-up, item 2).
+ * The floor plane's own Z centre — equal to `RIG_Z_OFFSET` so the floor and
+ * the rail+robot rig share the same Z position (checkpoint follow-up,
+ * round 3, item 2).
  */
-export const FLOOR_Z_CENTER = RIG_Z_OFFSET - (FLOOR_BACK_HALF_DEPTH - FLOOR_FRONT_HALF_DEPTH) / 2
+export const FLOOR_Z_CENTER = RIG_Z_OFFSET
 
 const RAIL_TOP_Y = RAIL_PROFILE_HEIGHT
 const END_STOP_CENTER_Y = RAIL_TOP_Y + END_STOP_HEIGHT / 2
