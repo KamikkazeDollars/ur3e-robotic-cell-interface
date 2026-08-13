@@ -48,13 +48,13 @@ Exceptions: This is a desktop-first CAD/robotics viewer (no touch-primary intera
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 16px | 400 (regular) | 1.5 |
-| Label | 14px | 500 (medium) | 1.4 |
+| Label | 14px | 400 (regular) | 1.4 |
 | Heading | 20px | 600 (semibold) | 1.2 |
 | Display | 28px | 600 (semibold) | 1.2 |
 
-3 font weights are declared for this phase, each with a distinct, non-overlapping semantic role: 400 (regular) for body prose, 500 (medium) reserved exclusively for compact UI labels (nav-cube face labels, button labels — never body text or headings), and 600 (semibold) for headings/display. No element may use more than one weight, and no weight is used outside its assigned role.
+Exactly 2 font weights are declared for this phase: 400 (regular) and 600 (semibold). Body and Label share weight 400 — they are differentiated by size (16px vs 14px) and line-height (1.5 vs 1.4), not weight. Heading and Display share weight 600 — differentiated by size only (20px vs 28px), both at line-height 1.2. Role-to-weight assignment is by function, not element type: passive/informational text (nav-cube face labels — "FRONT"/"TOP"/"BOTTOM"/"BACK"/"LEFT"/"RIGHT") uses 400 (Label role), while actionable UI elements (the "Reset View" button label) use 600 (treated as Heading-weight to signal it's an interactive CTA, not passive text) even though it sits at Label/body size. No element may use a weight outside 400/600.
 
-Monospace is reserved for numeric telemetry readouts (joint angles, TCP coordinates, speed) and is **not used in Phase 1** — this phase has no live numeric readouts (Dashboard telemetry begins Phase 5). Note for future phases: when introduced, use a monospace stack (e.g. `ui-monospace, "SF Mono", Consolas, monospace`) at 14px/500/1.4 to match the Label role's rhythm.
+Monospace is reserved for numeric telemetry readouts (joint angles, TCP coordinates, speed) and is **not used in Phase 1** — this phase has no live numeric readouts (Dashboard telemetry begins Phase 5). Note for future phases: when introduced, use a monospace stack (e.g. `ui-monospace, "SF Mono", Consolas, monospace`) at 14px/400/1.4 to match the Label role's rhythm.
 
 ---
 
