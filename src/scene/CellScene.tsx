@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import NavCube from './NavCube'
 import CameraResetListener from './CameraResetListener'
+import RailRig from './RailRig'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 
 // UI-SPEC Dominant / Secondary tones — kept in sync with the DOM background (index.css)
@@ -45,8 +46,12 @@ export default function CellScene() {
           <meshStandardMaterial color={SECONDARY_TONE} side={DoubleSide} />
         </mesh>
 
-        {/* Rail rig + UR3e mount point — inserted by plan 01-04 */}
-        <group name="rail-rig-mount" />
+        {/* Rail rig + UR3e mount point (plan 01-04): the 7th-axis rail with
+            end-stops (D-07) and its carriage carrying the posed UR3e (D-01,
+            D-02, D-08, D-09). */}
+        <group name="rail-rig-mount">
+          <RailRig />
+        </group>
 
         <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />
