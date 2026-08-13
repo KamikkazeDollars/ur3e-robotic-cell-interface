@@ -3,8 +3,9 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import NavCube from './NavCube'
 import CameraResetListener from './CameraResetListener'
-import RailRig from './RailRig'
+import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET } from './RailRig'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
+import { RAIL_CENTER_X } from '../kinematics'
 
 // UI-SPEC Dominant / Secondary tones — kept in sync with the DOM background (index.css)
 // so the WebGL canvas and the surrounding page chrome don't clash (D-06).
@@ -38,18 +39,28 @@ export default function CellScene() {
         <directionalLight position={[5, 8, 5]} intensity={1.2} castShadow />
 
         {/* Floor plane — grounds the cell and gives OrbitControls a natural pivot (D-05).
-            DoubleSide so the floor stays visible when the camera orbits below the
-            XZ plane (default FrontSide culls the plane's back face, making it
-            disappear from below-horizon views). */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[10, 10]} />
+            Sized to the rig's actual footprint (rail run + robot reach envelope
+            + a modest margin, both from RailRig.tsx — checkpoint follow-up item
+            3) rather than an arbitrary large plane, and centred on the same
+            forward-shifted rig position (item 2) so the robot never appears to
+            float off-plane. DoubleSide so the floor stays visible when the
+            camera orbits below the XZ plane (default FrontSide culls the
+            plane's back face, making it disappear from below-horizon views). */}
+        <mesh
+          position={[RAIL_CENTER_X, 0, RIG_Z_OFFSET]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH]} />
           <meshStandardMaterial color={SECONDARY_TONE} side={DoubleSide} />
         </mesh>
 
         {/* Rail rig + UR3e mount point (plan 01-04): the 7th-axis rail with
             end-stops (D-07) and its carriage carrying the posed UR3e (D-01,
-            D-02, D-08, D-09). */}
-        <group name="rail-rig-mount">
+            D-02, D-08, D-09). Shifted forward off the world origin toward the
+            default camera view (checkpoint follow-up item 2) rather than
+            straddling the origin symmetrically. */}
+        <group name="rail-rig-mount" position={[0, 0, RIG_Z_OFFSET]}>
           <RailRig />
         </group>
 
