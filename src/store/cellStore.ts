@@ -10,6 +10,11 @@ import { create } from 'zustand'
  * here — pushing per-frame values through Zustand/React state forces a
  * full re-render every animation tick.
  */
+/** Coarse-cadence robot-model load status — changes at most twice in the
+ * app's lifetime (loading -> ready, or loading -> error), so it belongs in
+ * the store unlike per-frame values (CLAUDE.md anti-pattern). */
+export type RobotLoadStatus = 'loading' | 'ready' | 'error'
+
 interface CellState {
   /**
    * Monotonically increasing token, not a boolean flag. A boolean would
@@ -22,9 +27,17 @@ interface CellState {
   resetToken: number
   /** Signals intent to restore the camera to the shared default framing. */
   requestCameraReset: () => void
+  /** The UR3e URDF load status, read by `SceneStatusOverlay`. Starts at
+   * 'loading' — the model has not loaded when the app first mounts. */
+  robotLoadStatus: RobotLoadStatus
+  /** Set by RobotModel's loader success/failure callbacks. Transitions are
+   * not one-way (e.g. a future reload could go ready -> loading -> error). */
+  setRobotLoadStatus: (status: RobotLoadStatus) => void
 }
 
 export const useCellStore = create<CellState>((set) => ({
   resetToken: 0,
   requestCameraReset: () => set((state) => ({ resetToken: state.resetToken + 1 })),
+  robotLoadStatus: 'loading',
+  setRobotLoadStatus: (status) => set({ robotLoadStatus: status }),
 }))

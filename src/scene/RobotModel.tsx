@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import URDFLoader, { type URDFRobot } from 'urdf-loader'
 import { UR3E_JOINT_NAMES, UR3E_READY_POSE } from '../kinematics'
+import { useCellStore } from '../store/cellStore'
 
 const URDF_PATH = '/robots/ur3e/ur3e.urdf'
 // Remaps the description's `package://ur_description/...` mesh URIs onto
@@ -13,6 +14,7 @@ const PACKAGE_REMAP = { ur_description: '/robots/ur3e' }
 
 function useUR3e() {
   const [robot, setRobot] = useState<URDFRobot>()
+  const setRobotLoadStatus = useCellStore((state) => state.setRobotLoadStatus)
 
   useEffect(() => {
     const loader = new URDFLoader()
@@ -39,13 +41,18 @@ function useUR3e() {
         // is attached here. Phase 7 owns the tool-changer swap logic.
 
         setRobot(loadedRobot)
+        setRobotLoadStatus('ready')
       },
       undefined,
       (err) => {
         console.error('Failed to load UR3e URDF:', err)
+        // Keep the failure path honest — no fallback geometry is set here,
+        // so the user sees the error panel over an empty carriage slot
+        // rather than a stand-in that implies the real model loaded.
+        setRobotLoadStatus('error')
       },
     )
-  }, [])
+  }, [setRobotLoadStatus])
 
   return robot
 }
