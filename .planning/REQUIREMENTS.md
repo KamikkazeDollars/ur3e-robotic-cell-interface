@@ -19,9 +19,9 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 
 ### 3D Scene & Navigation
 
-- [ ] **SCENE-01**: User can orbit, pan, and zoom the 3D camera around the robotic cell
+- [x] **SCENE-01**: User can orbit, pan, and zoom the 3D camera around the robotic cell
 - [x] **SCENE-02**: User can reset the camera to a centered view of the robot cell with one action
-- [ ] **SCENE-03**: User sees a navigation cube/gizmo showing Front/Top/Bottom/Back view presets that rotates in sync with the camera; clicking a face snaps the camera to that view
+- [x] **SCENE-03**: User sees a navigation cube/gizmo showing Front/Top/Bottom/Back view presets that rotates in sync with the camera; clicking a face snaps the camera to that view
 - [x] **SCENE-04**: User sees the UR3e robot rendered at correct pose using its actual kinematic model (DH parameters), including its 7th external linear-rail axis
 
 ### Dashboard
@@ -59,7 +59,7 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 
 ### Deployment
 
-- [ ] **DEPLOY-01**: Project source code is version-controlled on GitHub
+- [x] **DEPLOY-01**: Project source code is version-controlled on GitHub
 - [x] **DEPLOY-02**: Project is deployed to a publicly reachable URL that stays in sync with the latest working version
 
 ## v2 Requirements
@@ -105,9 +105,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-05 | Phase 3 | Pending |
 | SIM-06 | Phase 6 | Pending |
 | SIM-07 | Phase 6 | Pending |
-| SCENE-01 | Phase 1 | Pending |
+| SCENE-01 | Phase 1 | Complete |
 | SCENE-02 | Phase 1 | Complete |
-| SCENE-03 | Phase 1 | Pending |
+| SCENE-03 | Phase 1 | Complete |
 | SCENE-04 | Phase 1 | Complete |
 | DASH-01 | Phase 5 | Pending |
 | DASH-02 | Phase 5 | Pending |
@@ -121,7 +121,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IO-01 | Phase 8 | Pending |
 | OPT-01 | Phase 8 | Pending |
 | OPT-02 | Phase 8 | Pending |
-| DEPLOY-01 | Phase 1 | Pending |
+| DEPLOY-01 | Phase 1 | Complete |
 | DEPLOY-02 | Phase 1 | Complete |
 
 **Coverage:**
