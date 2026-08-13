@@ -13,7 +13,9 @@ robotics capability under a tight deadline.
 
 ## Live deployment
 
-<!-- gsd:live-deployment-url -->
+**Production:** https://agent-af215e80493c7cfda.vercel.app
+
+**GitHub:** https://github.com/KamikkazeDollars/ur3e-robotic-cell-interface
 
 ## Stack
 
