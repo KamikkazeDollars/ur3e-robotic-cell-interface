@@ -60,7 +60,7 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 ### Deployment
 
 - [ ] **DEPLOY-01**: Project source code is version-controlled on GitHub
-- [ ] **DEPLOY-02**: Project is deployed to a publicly reachable URL that stays in sync with the latest working version
+- [x] **DEPLOY-02**: Project is deployed to a publicly reachable URL that stays in sync with the latest working version
 
 ## v2 Requirements
 
@@ -122,7 +122,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPT-01 | Phase 8 | Pending |
 | OPT-02 | Phase 8 | Pending |
 | DEPLOY-01 | Phase 1 | Pending |
-| DEPLOY-02 | Phase 1 | Pending |
+| DEPLOY-02 | Phase 1 | Complete |
 
 **Coverage:**
 

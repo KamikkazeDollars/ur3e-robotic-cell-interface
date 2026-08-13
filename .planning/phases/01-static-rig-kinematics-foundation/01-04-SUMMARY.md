@@ -243,7 +243,7 @@ None. All asset fetches (URDF + 14 meshes) used public, unauthenticated GitHub r
 
 **Plan 01-04 — and Phase 1 as a whole — is functionally complete.** All automated verification is green (32/32 tests, `tsc --noEmit`, `npm run build`), the production URL serves the complete robot-on-rail scene with the checkpoint-follow-up composition changes, and Phase 1's goal ("an accurately-modeled UR3e including its 7th-axis rail, at a correct static pose, in an interactive nav-cube-driven 3D scene, live on a public URL") is met. `src/scene/RailRig.tsx`'s exported constants (`TRACK_LENGTH`, `ROBOT_REACH_ENVELOPE`, `RIG_FOOTPRINT_WIDTH/DEPTH`, `RIG_Z_OFFSET`, `FLOOR_Z_CENTER`) and `RobotModel.tsx`'s posing pattern (`UR3E_JOINT_NAMES`/`UR3E_READY_POSE` zip) are the established scene-composition surface Phase 3 (IK/trajectory re-posing), Phase 5 (telemetry reading `RAIL_TRAVEL`/`RAIL_CENTER_X`), and Phase 7 (tool-changer mounting onto the now-bare flange) all build directly on top of.
 
-No blockers for downstream phases. The one open item is the orchestrator's/user's final visual confirmation of the two checkpoint-follow-up rounds on the live URL — not a code blocker, but the last sign-off step before Phase 1 is formally closed.
+No blockers for downstream phases. The one open item is the orchestrator's/user's final visual confirmation of the checkpoint-follow-up rounds on the live URL — not a code blocker, but the last sign-off step before Phase 1 is formally closed.
 
 ---
 *Phase: 01-static-rig-kinematics-foundation*
@@ -251,4 +251,4 @@ No blockers for downstream phases. The one open item is the orchestrator's/user'
 
 ## Self-Check: PASSED
 
-All claimed files found on disk (`public/robots/ur3e/ur3e.urdf`, `src/scene/RobotModel.tsx`, `src/scene/RailRig.tsx`, `src/scene/urdf-asset.test.ts`, `src/ui/scene-status-copy.ts`, `src/ui/SceneStatusOverlay.tsx`, `src/scene/NavCube.tsx`, `src/scene/CellScene.tsx`, `src/store/cellStore.ts`); all commit hashes (`7b4be6b`, `d71c262`, `dcea594`, `9f98927`, `2502076`) found in `git log --oneline --all`.
+All claimed files found on disk (`public/robots/ur3e/ur3e.urdf`, `src/scene/RobotModel.tsx`, `src/scene/RailRig.tsx`, `src/scene/urdf-asset.test.ts`, `src/ui/scene-status-copy.ts`, `src/ui/SceneStatusOverlay.tsx`, `src/scene/NavCube.tsx`, `src/scene/CellScene.tsx`, `src/store/cellStore.ts`); all commit hashes (`7b4be6b`, `d71c262`, `dcea594`, `9f98927`, `2502076`, `9361eaa`) found in `git log --oneline --all`.

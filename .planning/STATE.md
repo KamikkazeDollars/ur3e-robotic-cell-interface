@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: static-rig-kinematics-foundation
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-08-13T15:58:05.084Z"
+stopped_at: Completed 01-04-PLAN.md (Phase 1 complete, pending final live-URL sign-off on checkpoint-follow-up composition changes)
+last_updated: "2026-08-13T17:12:23.422Z"
 last_activity: 2026-08-13
 last_activity_desc: Roadmap created (8 phases, 25/25 v1 requirements mapped)
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-13)
 ## Current Position
 
 Phase: 01 (static-rig-kinematics-foundation) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-13 — Phase 01 execution started
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 75%
 |------|----------|-------|-------|
 | Phase 01 P02 | 15min | 2 tasks | 6 files |
 | Phase 01 P03 | 25min | 2 tasks | 16 files |
+| Phase 01 P04 | 75min | 2 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 1, Plan 03]: Pinned shadcn CLI to 3.8.4 (not npm-latest 4.17.0), whose preset system (nova/vega/maia/...) replaced the classic neutral base-color flow the UI-SPEC and plan require.
 - [Phase ?]: [Phase 1, Plan 03]: Modeled camera-reset as a monotonically increasing resetToken (not a boolean) so every repeated Reset View click fires distinctly, proven by a 7-test Vitest suite.
 - [Phase ?]: [Phase 1, Plan 03]: Verified the shadcn CLI's radix-ui umbrella-package dependency delta against the npm registry (same radix-ui/primitives org, ~12M weekly downloads) rather than re-opening the package-legitimacy checkpoint, per coordinator instruction to continue.
+- [Phase ?]: Sourced UR3e meshes from UniversalRobots/Universal_Robots_ROS2_Description's rolling branch (not main/master, which do not exist on that repo)
+- [Phase ?]: Added node to tsconfig.app.json types after tsc -b (real build gate) caught a Node-builtin type-check failure that bare tsc --noEmit silently missed (root tsconfig files:[] checks nothing without -b)
+- [Phase ?]: Checkpoint follow-up (2 rounds, user-directed, confirmed no later phase owns scene composition): axis triad on nav cube (verified GizmoViewcube face order from installed source), rig+robot shifted forward off world origin, footprint-sized asymmetric floor (front-positioned, not centered), twin-rail carriage geometry
+- [Phase ?]: Investigated a reported floor/rig Z mismatch via three empirical methods (three.js matrixWorld simulation, full nested-group scene-graph reconstruction with forwardKinematics data, and DAE mesh matrix inspection) before concluding no coordinate bug existed and fixing the underlying design (floor's own asymmetric Z center) instead of chasing a nonexistent bug
 
 ### Pending Todos
 
@@ -98,6 +103,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T15:58:05.070Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-08-13T17:12:23.405Z
+Stopped at: Completed 01-04-PLAN.md (Phase 1 complete, pending final live-URL sign-off on checkpoint-follow-up composition changes)
 Resume file: None
