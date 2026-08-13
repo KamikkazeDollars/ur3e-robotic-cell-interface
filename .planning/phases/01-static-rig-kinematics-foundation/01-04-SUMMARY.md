@@ -131,7 +131,7 @@ status: complete
 
 # Phase 1 Plan 04: UR3e Rendering + Rail Rig + Deployment Sign-off Summary
 
-**Official UR3e URDF (fetched from the flattened dataset repo + 14 meshes from UniversalRobots' own ROS2 description repo) rendered on a twin-rail 7th-axis rig via a manually-constructed URDFLoader, cross-checked against the project's own DH constants by an asset-integrity test, with loading/error UI and two rounds of checkpoint-driven scene-composition refinement (axis triad, front-positioned layout, footprint-sized floor, realistic rail geometry) — all redeployed and confirmed live.**
+**Official UR3e URDF (fetched from the flattened dataset repo + 14 meshes from UniversalRobots' own ROS2 description repo) rendered on a twin-rail 7th-axis rig via a manually-constructed URDFLoader, cross-checked against the project's own DH constants by an asset-integrity test, with loading/error UI and three rounds of checkpoint-driven scene-composition refinement (axis triad, forward-shifted layout, footprint-sized floor sharing the rig's Z position, realistic rail geometry) — all redeployed and confirmed live.**
 
 ## Performance
 
@@ -150,7 +150,8 @@ status: complete
 - `src/store/cellStore.ts` extended with `robotLoadStatus`/`setRobotLoadStatus`; `src/ui/scene-status-copy.ts` + `SceneStatusOverlay.tsx` render the UI-SPEC loading/error copy over the canvas, wired through `RobotModel.tsx`'s load success/failure callbacks
 - Production deployment re-verified after every push (3 pushes this plan): HTML shell, the current JS bundle, and `/robots/ur3e/ur3e.urdf` all return 200 from `https://agent-af215e80493c7cfda.vercel.app`
 - **Checkpoint round 1 (4 in-scope deviations, requested by the user before phase sign-off, confirmed via ROADMAP.md as not owned by any later phase):** an XYZ axis triad on the nav cube (`THREE.AxesHelper`, verified against `GizmoViewcube`'s actual face-material order from its installed source), the rig+robot shifted forward off the world origin, the floor sized to the rig's actual footprint instead of an arbitrary 10x10 plane, and the rail rebuilt as twin rails + a slider-block carriage + discrete end-stop blocks instead of one wide box with tall fins
-- **Checkpoint round 2 (2 further refinements):** the axis triad moved to the opposite cube corner with full-cube-edge-length `ArrowHelper` arrows (visible arrowheads) instead of a short `AxesHelper` stub; a reported floor/rig Z-position mismatch investigated via three independent empirical methods (all of which found no coordinate bug — see Deviations) and resolved by giving the floor an intentionally asymmetric Z centre so the rig reads as front-positioned rather than centred on its own floor
+- **Checkpoint round 2 (2 further refinements):** the axis triad moved to the opposite cube corner with full-cube-edge-length `ArrowHelper` arrows (visible arrowheads) instead of a short `AxesHelper` stub; a reported floor/rig Z-position mismatch investigated via three independent empirical methods (all of which found no coordinate bug — see Deviations) and resolved (at the time) by giving the floor an intentionally asymmetric Z centre
+- **Checkpoint round 3 (1 item, direct user override):** after reviewing round 2's asymmetric floor, the user explicitly asked for the floor and rig to share the exact same Z position after all — `FLOOR_Z_CENTER` reverted to equal `RIG_Z_OFFSET`, restoring the simple symmetric design the round-2 empirical investigation had already shown was geometrically correct
 
 ## Task Commits
 
@@ -159,6 +160,7 @@ status: complete
 3. **Task 2 — GREEN: wire loading/error overlay through robotLoadStatus** - `dcea594` (feat)
 4. **Checkpoint follow-up round 1: axis triad, forward layout, real rail look** - `9f98927` (feat)
 5. **Checkpoint follow-up round 2: arrowed axis triad, front-aligned floor** - `2502076` (feat)
+6. **Checkpoint follow-up round 3: floor shares the rig's exact Z** - `9361eaa` (fix)
 
 **Plan metadata:** this commit (docs: complete plan)
 
@@ -222,11 +224,11 @@ See `key-decisions` in frontmatter for the full list. Highlights: sourced the UR
 1. **Floor reverted to same Z as the rig.** After reviewing round 2's asymmetric floor (rig sitting 0.8m from the floor's front edge and 1.3m from its back edge), the user explicitly asked for the rail+robot to share the same Z position as the floor — overriding round 1's "front edge, not centred" framing that had motivated the asymmetry in the first place. `RailRig.tsx`'s `FLOOR_Z_CENTER` now equals `RIG_Z_OFFSET` exactly, with `RIG_FOOTPRINT_DEPTH` symmetric around that shared centre (`2 * (ROBOT_REACH_ENVELOPE + FOOTPRINT_MARGIN)`), removing the front/back margin split introduced in round 2.
 - **Files modified:** `src/scene/RailRig.tsx`, `src/scene/CellScene.tsx`
 - **Verification:** full suite (32/32), `tsc --noEmit`, `npm run build` all green.
-- **Committed in:** (this commit)
+- **Committed in:** `9361eaa`
 
 ---
 
-**Total deviations:** 1 auto-fixed blocking issue + 2 rounds of user-directed checkpoint follow-up (6 composition items total).
+**Total deviations:** 1 auto-fixed blocking issue + 3 rounds of user-directed checkpoint follow-up (7 composition items total).
 **Impact on plan:** The blocking fix was necessary for the build to pass at all. The checkpoint follow-up work was explicitly directed by the user (relayed via the coordinator) as in-scope closure of plan 01-04, confirmed against ROADMAP.md as not owned by any later phase — not autonomous scope creep, and not started until that explicit direction was given.
 
 ## Issues Encountered
