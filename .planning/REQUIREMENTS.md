@@ -98,37 +98,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIM-01 | TBD | Pending |
-| SIM-02 | TBD | Pending |
-| SIM-03 | TBD | Pending |
-| SIM-04 | TBD | Pending |
-| SIM-05 | TBD | Pending |
-| SIM-06 | TBD | Pending |
-| SIM-07 | TBD | Pending |
-| SCENE-01 | TBD | Pending |
-| SCENE-02 | TBD | Pending |
-| SCENE-03 | TBD | Pending |
-| SCENE-04 | TBD | Pending |
-| DASH-01 | TBD | Pending |
-| DASH-02 | TBD | Pending |
-| DASH-03 | TBD | Pending |
-| TOOL-01 | TBD | Pending |
-| TOOL-02 | TBD | Pending |
-| VISION-01 | TBD | Pending |
-| CALIB-01 | TBD | Pending |
-| CALIB-02 | TBD | Pending |
-| SETUP-01 | TBD | Pending |
-| IO-01 | TBD | Pending |
-| OPT-01 | TBD | Pending |
-| OPT-02 | TBD | Pending |
-| DEPLOY-01 | TBD | Pending |
-| DEPLOY-02 | TBD | Pending |
+| SIM-01 | Phase 2 | Pending |
+| SIM-02 | Phase 2 | Pending |
+| SIM-03 | Phase 6 | Pending |
+| SIM-04 | Phase 4 | Pending |
+| SIM-05 | Phase 3 | Pending |
+| SIM-06 | Phase 6 | Pending |
+| SIM-07 | Phase 6 | Pending |
+| SCENE-01 | Phase 1 | Pending |
+| SCENE-02 | Phase 1 | Pending |
+| SCENE-03 | Phase 1 | Pending |
+| SCENE-04 | Phase 1 | Pending |
+| DASH-01 | Phase 5 | Pending |
+| DASH-02 | Phase 5 | Pending |
+| DASH-03 | Phase 5 | Pending |
+| TOOL-01 | Phase 7 | Pending |
+| TOOL-02 | Phase 7 | Pending |
+| VISION-01 | Phase 8 | Pending |
+| CALIB-01 | Phase 8 | Pending |
+| CALIB-02 | Phase 8 | Pending |
+| SETUP-01 | Phase 8 | Pending |
+| IO-01 | Phase 8 | Pending |
+| OPT-01 | Phase 8 | Pending |
+| OPT-02 | Phase 8 | Pending |
+| DEPLOY-01 | Phase 1 | Pending |
+| DEPLOY-02 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 25 ⚠️ (expected before roadmap step)
+- Mapped to phases: 25 (100%)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-13*
-*Last updated: 2026-08-13 after initial definition*
+*Last updated: 2026-08-13 after roadmap creation*
