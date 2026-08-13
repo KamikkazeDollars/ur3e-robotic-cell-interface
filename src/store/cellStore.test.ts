@@ -44,6 +44,31 @@ describe('useCellStore', () => {
   })
 })
 
+describe('useCellStore — robotLoadStatus', () => {
+  it('starts at loading', () => {
+    expect(useCellStore.getState().robotLoadStatus).toBe('loading')
+  })
+
+  it('setRobotLoadStatus("ready") sets the status to ready', () => {
+    useCellStore.getState().setRobotLoadStatus('ready')
+    expect(useCellStore.getState().robotLoadStatus).toBe('ready')
+  })
+
+  it('transitions are not one-way: error can follow ready', () => {
+    useCellStore.getState().setRobotLoadStatus('ready')
+    expect(useCellStore.getState().robotLoadStatus).toBe('ready')
+    useCellStore.getState().setRobotLoadStatus('error')
+    expect(useCellStore.getState().robotLoadStatus).toBe('error')
+  })
+
+  it('changing the load status leaves resetToken untouched', () => {
+    const before = useCellStore.getState().resetToken
+    useCellStore.getState().setRobotLoadStatus('ready')
+    useCellStore.getState().setRobotLoadStatus('error')
+    expect(useCellStore.getState().resetToken).toBe(before)
+  })
+})
+
 describe('camera-defaults', () => {
   it('exports DEFAULT_CAMERA_POSITION as a three-number tuple', () => {
     expect(DEFAULT_CAMERA_POSITION).toHaveLength(3)
