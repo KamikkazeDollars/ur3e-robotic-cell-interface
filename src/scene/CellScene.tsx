@@ -4,6 +4,7 @@ import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import NavCube from './NavCube'
 import CameraResetListener from './CameraResetListener'
 import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET, FLOOR_Z_CENTER } from './RailRig'
+import Toolpath from './Toolpath'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
 
@@ -16,8 +17,9 @@ const SECONDARY_TONE = '#E4E7EB'
  * R3F Canvas composition root — the phase's "one real route" analogue.
  *
  * Composition order (per PATTERNS.md's definitive ordering):
- *   lights (ambient + directional) -> floor plane -> [rail/robot mount point,
- *   plan 01-04] -> OrbitControls (makeDefault) -> NavCube
+ *   lights (ambient + directional) -> floor plane -> rail/robot mount point
+ *   -> Toolpath (plan 02-01, mounted after the rig, before OrbitControls)
+ *   -> OrbitControls (makeDefault) -> NavCube
  */
 export default function CellScene() {
   return (
@@ -64,6 +66,11 @@ export default function CellScene() {
         <group name="rail-rig-mount" position={[0, 0, RIG_Z_OFFSET]}>
           <RailRig />
         </group>
+
+        {/* SIM-01/SIM-02 (plan 02-01): the classified, D-06-anchored
+            toolpath for whichever bundled sample is selected. Points arrive
+            already in world space, so no wrapping group/transform here. */}
+        <Toolpath />
 
         <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />
