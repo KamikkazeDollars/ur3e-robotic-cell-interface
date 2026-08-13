@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import NavCube from './NavCube'
 import CameraResetListener from './CameraResetListener'
-import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET } from './RailRig'
+import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET, FLOOR_Z_CENTER } from './RailRig'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
 
@@ -40,14 +40,18 @@ export default function CellScene() {
 
         {/* Floor plane — grounds the cell and gives OrbitControls a natural pivot (D-05).
             Sized to the rig's actual footprint (rail run + robot reach envelope
-            + a modest margin, both from RailRig.tsx — checkpoint follow-up item
-            3) rather than an arbitrary large plane, and centred on the same
-            forward-shifted rig position (item 2) so the robot never appears to
-            float off-plane. DoubleSide so the floor stays visible when the
-            camera orbits below the XZ plane (default FrontSide culls the
-            plane's back face, making it disappear from below-horizon views). */}
+            + margin, all from RailRig.tsx — checkpoint follow-up item 3) rather
+            than an arbitrary large plane. Positioned at FLOOR_Z_CENTER, NOT
+            RIG_Z_OFFSET (checkpoint follow-up, round 2, item 2): the floor's own
+            centre sits behind the rig on purpose, so the rig reads as
+            front-positioned on the floor rather than dead-centred on it — see
+            RailRig.tsx's "Floor asymmetry" comment for the empirical
+            verification that ruled out a coordinate bug before this change.
+            DoubleSide so the floor stays visible when the camera orbits below
+            the XZ plane (default FrontSide culls the plane's back face, making
+            it disappear from below-horizon views). */}
         <mesh
-          position={[RAIL_CENTER_X, 0, RIG_Z_OFFSET]}
+          position={[RAIL_CENTER_X, 0, FLOOR_Z_CENTER]}
           rotation={[-Math.PI / 2, 0, 0]}
           receiveShadow
         >
