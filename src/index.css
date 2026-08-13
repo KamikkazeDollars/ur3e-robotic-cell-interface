@@ -1,0 +1,24 @@
+/* Minimal reset + page background. plan 01-03 owns the full design-token layer. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  /* UI-SPEC Dominant tone — keeps DOM chrome consistent with the WebGL canvas clear color */
+  background: #fafafa;
+  font-family:
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
