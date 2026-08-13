@@ -41,12 +41,12 @@ export default function CellScene() {
         {/* Floor plane — grounds the cell and gives OrbitControls a natural pivot (D-05).
             Sized to the rig's actual footprint (rail run + robot reach envelope
             + margin, all from RailRig.tsx — checkpoint follow-up item 3) rather
-            than an arbitrary large plane. FLOOR_Z_CENTER equals RIG_Z_OFFSET
-            (checkpoint follow-up, round 3, item 2): the floor and the rail+robot
-            rig share the same Z position. DoubleSide so the floor stays visible
-            when the camera orbits below the XZ plane (default FrontSide culls
-            the plane's back face, making it disappear from below-horizon
-            views). */}
+            than an arbitrary large plane. FLOOR_Z_CENTER sits behind RIG_Z_OFFSET
+            (checkpoint follow-up, round 4, item 2): the rig reads as positioned
+            near the floor's front (camera-side) edge, with extra floor depth
+            extending behind it. DoubleSide so the floor stays visible when the
+            camera orbits below the XZ plane (default FrontSide culls the
+            plane's back face, making it disappear from below-horizon views). */}
         <mesh
           position={[RAIL_CENTER_X, 0, FLOOR_Z_CENTER]}
           rotation={[-Math.PI / 2, 0, 0]}

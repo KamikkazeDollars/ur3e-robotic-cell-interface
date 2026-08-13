@@ -60,24 +60,31 @@ export const RIG_FOOTPRINT_WIDTH = TRACK_LENGTH + 2 * ROBOT_REACH_ENVELOPE + 2 *
  */
 export const RIG_Z_OFFSET = ROBOT_REACH_ENVELOPE
 
-// --- Floor sizing (checkpoint follow-up, round 3 — item 2) ----------------
+// --- Floor asymmetry (checkpoint follow-up, round 4 — item 2) -------------
 //
-// The floor's own Z centre matches the rig's Z position exactly
-// (RIG_Z_OFFSET), per explicit instruction: rail+robot and the floor sit at
-// the same Z. Depth is symmetric around that shared centre — the reach
-// envelope plus a margin on each side.
-const FLOOR_HALF_DEPTH = ROBOT_REACH_ENVELOPE + FOOTPRINT_MARGIN
+// Round 3 made the floor's Z centre equal RIG_Z_OFFSET (symmetric depth).
+// Confirmed via a top-down diagram: the rig should instead sit near the
+// floor's FRONT (camera-side) edge, with extra floor depth extending BEHIND
+// it (away from the camera, toward the background) — not centred on its own
+// floor. The floor's own centre therefore sits behind the rig: a small
+// front margin between the rig and the floor's near edge, and a larger
+// back margin behind it.
+const FLOOR_FRONT_MARGIN = FOOTPRINT_MARGIN // small breathing room, near-camera side
+const FLOOR_BACK_MARGIN = FOOTPRINT_MARGIN + ROBOT_REACH_ENVELOPE // extra depth behind the rig, away from the camera
 
-/** Total floor depth, symmetric around the rig's own Z position
- * (checkpoint follow-up, round 3, item 2). */
-export const RIG_FOOTPRINT_DEPTH = 2 * FLOOR_HALF_DEPTH
+const FLOOR_FRONT_HALF_DEPTH = ROBOT_REACH_ENVELOPE + FLOOR_FRONT_MARGIN
+const FLOOR_BACK_HALF_DEPTH = ROBOT_REACH_ENVELOPE + FLOOR_BACK_MARGIN
+
+/** Total floor depth (front + back halves) — asymmetric around the rig's
+ * own Z position (checkpoint follow-up, round 4, item 2). */
+export const RIG_FOOTPRINT_DEPTH = FLOOR_FRONT_HALF_DEPTH + FLOOR_BACK_HALF_DEPTH
 
 /**
- * The floor plane's own Z centre — equal to `RIG_Z_OFFSET` so the floor and
- * the rail+robot rig share the same Z position (checkpoint follow-up,
- * round 3, item 2).
+ * The floor plane's own Z centre — sits behind the rig (checkpoint
+ * follow-up, round 4, item 2), so the rig reads as positioned near the
+ * floor's front edge, with the extra depth extending behind it.
  */
-export const FLOOR_Z_CENTER = RIG_Z_OFFSET
+export const FLOOR_Z_CENTER = RIG_Z_OFFSET - (FLOOR_BACK_HALF_DEPTH - FLOOR_FRONT_HALF_DEPTH) / 2
 
 const RAIL_TOP_Y = RAIL_PROFILE_HEIGHT
 const END_STOP_CENTER_Y = RAIL_TOP_Y + END_STOP_HEIGHT / 2
