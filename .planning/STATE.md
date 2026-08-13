@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: static-rig-kinematics-foundation
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-08-13T12:51:03.383Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-08-13T15:58:05.084Z"
 last_activity: 2026-08-13
 last_activity_desc: Roadmap created (8 phases, 25/25 v1 requirements mapped)
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-13)
 ## Current Position
 
 Phase: 01 (static-rig-kinematics-foundation) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-13 — Phase 01 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P02 | 15min | 2 tasks | 6 files |
+| Phase 01 P03 | 25min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [Roadmap]: DEPLOY-01/DEPLOY-02 mapped to Phase 1 since deployment is meant to start day one and be redeployed after every phase (per research Pitfall 15), even though it's an operating concern threaded through all phases.
 - [Phase ?]: Composed the DH chain from four primitive matrix transforms (rotZ/transZ/transX/rotX via a generic multiply helper) rather than the algebraically-equivalent closed-form single matrix, to match the plan's step-by-step action wording and keep each DH primitive independently auditable.
 - [Phase ?]: Independently hand-verified the 6-step home-pose matrix chain before implementing forward-kinematics.ts, confirming the composition order (not just the RESEARCH.md literals) reproduces the reference TCP position and rotation submatrix.
+- [Phase ?]: [Phase 1, Plan 03]: Pinned shadcn CLI to 3.8.4 (not npm-latest 4.17.0), whose preset system (nova/vega/maia/...) replaced the classic neutral base-color flow the UI-SPEC and plan require.
+- [Phase ?]: [Phase 1, Plan 03]: Modeled camera-reset as a monotonically increasing resetToken (not a boolean) so every repeated Reset View click fires distinctly, proven by a 7-test Vitest suite.
+- [Phase ?]: [Phase 1, Plan 03]: Verified the shadcn CLI's radix-ui umbrella-package dependency delta against the npm registry (same radix-ui/primitives org, ~12M weekly downloads) rather than re-opening the package-legitimacy checkpoint, per coordinator instruction to continue.
 
 ### Pending Todos
 
@@ -94,6 +98,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-13T12:51:03.369Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-08-13T15:58:05.070Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

@@ -20,7 +20,7 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 ### 3D Scene & Navigation
 
 - [ ] **SCENE-01**: User can orbit, pan, and zoom the 3D camera around the robotic cell
-- [ ] **SCENE-02**: User can reset the camera to a centered view of the robot cell with one action
+- [x] **SCENE-02**: User can reset the camera to a centered view of the robot cell with one action
 - [ ] **SCENE-03**: User sees a navigation cube/gizmo showing Front/Top/Bottom/Back view presets that rotates in sync with the camera; clicking a face snaps the camera to that view
 - [x] **SCENE-04**: User sees the UR3e robot rendered at correct pose using its actual kinematic model (DH parameters), including its 7th external linear-rail axis
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-06 | Phase 6 | Pending |
 | SIM-07 | Phase 6 | Pending |
 | SCENE-01 | Phase 1 | Pending |
-| SCENE-02 | Phase 1 | Pending |
+| SCENE-02 | Phase 1 | Complete |
 | SCENE-03 | Phase 1 | Pending |
 | SCENE-04 | Phase 1 | Complete |
 | DASH-01 | Phase 5 | Pending |
