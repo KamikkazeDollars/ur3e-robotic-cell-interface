@@ -70,7 +70,22 @@ Plans:
   1. User can upload a g-code file and the system parses it into classified move segments (move type, coordinates, feed rate per segment)
   2. User sees the parsed toolpath rendered in the 3D scene as a color-coded line, with rapid/joint moves visually distinct from linear/cutting moves
 
-**Plans**: TBD
+*Scope note: "upload" is scoped to curated, bundled sample files for this phase per locked decision D-01 (02-CONTEXT.md) — no file-upload UI is built.*
+
+**Plans**: 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Tracer: pick a bundled sample and see its colour/dash-coded toolpath anchored in the cell, with the production build proving the parser stack (SIM-01, SIM-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — G2/G3 arc tessellation, the milling sample with depth passes, input guards, and the committed sample/anchor test suite (SIM-01, SIM-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Camera auto-fit to the selected toolpath, parse loading/error surface, unit disclosure, and the visual sign-off (SIM-01, SIM-02)
 
 ### Phase 3: Inverse Kinematics + Trajectory Compile + Scrub
 
@@ -164,7 +179,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
-| 2. G-code Import + Static Toolpath | 0/? | Not started | - |
+| 2. G-code Import + Static Toolpath | 0/3 | Planned      | - |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 0/? | Not started | - |
 | 4. Playback Engine | 0/? | Not started | - |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
