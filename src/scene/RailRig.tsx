@@ -90,7 +90,12 @@ const RAIL_TOP_Y = RAIL_PROFILE_HEIGHT
 const END_STOP_CENTER_Y = RAIL_TOP_Y + END_STOP_HEIGHT / 2
 const CARRIAGE_BASE_CENTER_Y = RAIL_TOP_Y + CARRIAGE_BASE_HEIGHT / 2
 const CARRIAGE_BLOCK_CENTER_Y = RAIL_TOP_Y + CARRIAGE_BASE_HEIGHT + CARRIAGE_BLOCK_HEIGHT / 2
-const CARRIAGE_TOP_Y = RAIL_TOP_Y + CARRIAGE_BASE_HEIGHT + CARRIAGE_BLOCK_HEIGHT
+/** World-space Y (vertical) height of the carriage's top surface — where the
+ * robot is bolted on — derived as rail top height + carriage base "shoe"
+ * height + carriage mounting-block height. Exported (Pitfall D) so
+ * `src/gcode/toolpath-anchor.ts` (D-06) can compose the robot's world-space
+ * mounting point without restating this derivation as a literal. */
+export const CARRIAGE_TOP_Y = RAIL_TOP_Y + CARRIAGE_BASE_HEIGHT + CARRIAGE_BLOCK_HEIGHT
 
 const RAIL_Z_OFFSETS = [-RAIL_GAP / 2, RAIL_GAP / 2] as const
 
