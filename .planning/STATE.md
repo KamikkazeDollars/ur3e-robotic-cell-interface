@@ -6,7 +6,7 @@ current_phase: 01
 current_phase_name: static-rig-kinematics-foundation
 status: executing
 stopped_at: Completed 01-04-PLAN.md (Phase 1 complete, pending final live-URL sign-off on checkpoint-follow-up composition changes)
-last_updated: "2026-08-13T17:12:23.422Z"
+last_updated: "2026-08-13T17:16:06.201Z"
 last_activity: 2026-08-13
 last_activity_desc: Roadmap created (8 phases, 25/25 v1 requirements mapped)
 progress:
@@ -80,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Added node to tsconfig.app.json types after tsc -b (real build gate) caught a Node-builtin type-check failure that bare tsc --noEmit silently missed (root tsconfig files:[] checks nothing without -b)
 - [Phase ?]: Checkpoint follow-up (2 rounds, user-directed, confirmed no later phase owns scene composition): axis triad on nav cube (verified GizmoViewcube face order from installed source), rig+robot shifted forward off world origin, footprint-sized asymmetric floor (front-positioned, not centered), twin-rail carriage geometry
 - [Phase ?]: Investigated a reported floor/rig Z mismatch via three empirical methods (three.js matrixWorld simulation, full nested-group scene-graph reconstruction with forwardKinematics data, and DAE mesh matrix inspection) before concluding no coordinate bug existed and fixing the underlying design (floor's own asymmetric Z center) instead of chasing a nonexistent bug
+- [Phase ?]: Checkpoint follow-up round 3: user reviewed round 2's asymmetric floor and explicitly requested the floor share the exact same Z as the rig after all; reverted to the simple symmetric design the round-2 empirical investigation had already proven correct
 
 ### Pending Todos
 
