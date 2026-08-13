@@ -52,7 +52,7 @@ Exceptions: This is a desktop-first CAD/robotics viewer (no touch-primary intera
 | Heading | 20px | 600 (semibold) | 1.2 |
 | Display | 28px | 600 (semibold) | 1.2 |
 
-Only two weights are used across the app: 400 (regular, body text) and 600 (semibold, headings/display) — Label uses 500 as a documented third weight reserved specifically for compact UI labels (nav-cube face labels, button labels), not body prose.
+3 font weights are declared for this phase, each with a distinct, non-overlapping semantic role: 400 (regular) for body prose, 500 (medium) reserved exclusively for compact UI labels (nav-cube face labels, button labels — never body text or headings), and 600 (semibold) for headings/display. No element may use more than one weight, and no weight is used outside its assigned role.
 
 Monospace is reserved for numeric telemetry readouts (joint angles, TCP coordinates, speed) and is **not used in Phase 1** — this phase has no live numeric readouts (Dashboard telemetry begins Phase 5). Note for future phases: when introduced, use a monospace stack (e.g. `ui-monospace, "SF Mono", Consolas, monospace`) at 14px/500/1.4 to match the Label role's rhythm.
 
@@ -70,6 +70,8 @@ Monospace is reserved for numeric telemetry readouts (joint angles, TCP coordina
 Accent reserved for: nav-cube active/hover face highlight; "Reset View" CTA button; camera-control active/toggled states (if implemented beyond bare `OrbitControls`). Never applied to the robot/rail 3D geometry itself, background chrome, or as a general link/text color.
 
 Note on D-06 (neutral studio lighting): the 3D scene's own lighting (soft ambient + directional light) and background (light gray/white, or a subtle gradient within the Dominant/Secondary range above) are Three.js scene properties, not CSS/DOM color tokens — they should read as visually consistent with the Dominant (#FAFAFA) / Secondary (#E4E7EB) palette above so the DOM chrome and the WebGL canvas don't clash, but exact gradient stops are implementation discretion.
+
+**Visual focal point:** The UR3e robot model (on its rail carriage) is the primary visual anchor of the scene — it must read as the largest, most detailed, and most central element in the frame (default camera framing centers the robot with comfortable margin, per D-08/D-09 pose and carriage-centering). The nav-cube (top corner) and the "Reset View" button are secondary controls: small, positioned at the scene's periphery, and styled with restrained accent use (per the Accent row above) so they orient/assist without competing with the robot for attention. Floor plane, rail track, and end-stop markers stay in the Secondary (30%) tone specifically so they recede behind the robot rather than drawing the eye.
 
 ---
 
