@@ -16,4 +16,20 @@ export {
   type ForwardKinematicsResult,
 } from './forward-kinematics';
 
-export { RAIL_TRAVEL, RAIL_CENTER_X, railRemainingTravel, clampRailPosition } from './rail';
+export {
+  RAIL_TRAVEL,
+  RAIL_CENTER_X,
+  railRemainingTravel,
+  clampRailPosition,
+  resolveRailPosition,
+  RAIL_RESOLUTION_CANDIDATES,
+} from './rail';
+
+export {
+  solveUR6IK,
+  buildToolDownTarget,
+  validBranches,
+  pickClosestBranch,
+  jointSpaceDistance,
+  TOOL_FLANGE_OFFSET_Z,
+} from './inverse-kinematics';

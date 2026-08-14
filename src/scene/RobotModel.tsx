@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import URDFLoader, { type URDFRobot } from 'urdf-loader'
 import { UR3E_JOINT_NAMES, UR3E_READY_POSE } from '../kinematics'
 import { useCellStore } from '../store/cellStore'
+import RobotPose from './RobotPose'
 
 const URDF_PATH = '/robots/ur3e/ur3e.urdf'
 // Remaps the description's `package://ur_description/...` mesh URIs onto
@@ -66,5 +67,12 @@ function useUR3e() {
  */
 export default function RobotModel() {
   const robot = useUR3e()
-  return robot ? <primitive object={robot} /> : null
+  return robot ? (
+    <>
+      <primitive object={robot} />
+      {/* D-05: the scrub-driven pose driver, mounted once the robot exists
+          so it always has a real `URDFRobot` to call `setJointValue` on. */}
+      <RobotPose robot={robot} />
+    </>
+  ) : null
 }

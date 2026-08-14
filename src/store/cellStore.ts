@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { GCODE_SAMPLES } from '../gcode/samples'
 import { parseToolpath, type ParsedToolpath } from '../gcode/parseToolpath'
+import { compileTrajectory, type CompiledTrajectory } from '../trajectory/compile'
 
 /**
  * Minimal, coarse-cadence Zustand store — the shape Phases 5-8 extend.
@@ -11,6 +12,13 @@ import { parseToolpath, type ParsedToolpath } from '../gcode/parseToolpath'
  * frame must stay in refs/imperative Three.js updates (`useFrame`), not
  * here — pushing per-frame values through Zustand/React state forces a
  * full re-render every animation tick.
+ *
+ * `scrubFraction` is itself a coarse-cadence, drag-TICK value (one `set()`
+ * per range-input `onChange` event), not a per-animation-frame value: it is
+ * WHAT the user is asking for, read at whatever cadence the browser fires
+ * `onChange` at. The per-frame consumer of it (`src/scene/RobotPose.tsx`)
+ * reads it via `getState()` inside `useFrame`, never through a reactive
+ * selector — no per-animation-frame value is ever WRITTEN here.
  */
 /** Coarse-cadence robot-model load status — changes at most twice in the
  * app's lifetime (loading -> ready, or loading -> error), so it belongs in
@@ -50,12 +58,27 @@ interface CellState {
   /** The parsed, classified, D-06-anchored toolpath — `null` until a
    * selection resolves successfully. `Toolpath.tsx` reads this to render. */
   toolpath: ParsedToolpath | null
+  /** The compiled IK trajectory for the currently selected sample — `null`
+   * until `selectSample` both parses AND compiles successfully. Compiled
+   * exactly once per sample selection (never on a scrub-drag event), inside
+   * the same stale-request guard `toolpath` itself is set under, so a
+   * superseded compile can never reach the store. */
+  trajectory: CompiledTrajectory | null
+  /** Coarse-cadence scrub position in [0, 1] along the current trajectory's
+   * arc-length parameterisation — see the file-header comment above. */
+  scrubFraction: number
+  /** Clamps into [0, 1] before writing, so a scrub control can never push
+   * the store out of the range `pointAtFraction` accepts. */
+  setScrubFraction: (fraction: number) => void
   /**
    * Resolves `sampleId` from `GCODE_SAMPLES`, fetches its bundled file, and
    * parses it via `parseToolpath`. This is a once-per-selection write (the
    * file's own top-of-file rule permits it) — nothing here is written from
    * a render frame. Wrapped in try/catch so a parse/fetch failure lands on
-   * status 'error' instead of throwing into React.
+   * status 'error' instead of throwing into React. Immediately after
+   * `parseToolpath` succeeds (inside the same stale-request guard),
+   * compiles the trajectory via `compileTrajectory` and resets
+   * `scrubFraction` to zero for the new sample.
    */
   selectSample: (sampleId: string) => Promise<void>
 }
@@ -78,17 +101,20 @@ export const useCellStore = create<CellState>((set) => ({
   selectedSampleId: null,
   toolpathLoadStatus: 'idle',
   toolpath: null,
+  trajectory: null,
+  scrubFraction: 0,
+  setScrubFraction: (fraction) => set({ scrubFraction: Math.min(1, Math.max(0, fraction)) }),
   selectSample: async (sampleId) => {
     selectSampleRequestId += 1
     const requestId = selectSampleRequestId
 
     const sample = GCODE_SAMPLES.find((candidate) => candidate.id === sampleId)
     if (!sample) {
-      set({ selectedSampleId: sampleId, toolpathLoadStatus: 'error', toolpath: null })
+      set({ selectedSampleId: sampleId, toolpathLoadStatus: 'error', toolpath: null, trajectory: null })
       return
     }
 
-    set({ selectedSampleId: sampleId, toolpathLoadStatus: 'parsing', toolpath: null })
+    set({ selectedSampleId: sampleId, toolpathLoadStatus: 'parsing', toolpath: null, trajectory: null })
 
     try {
       const response = await fetch(sample.filePath)
@@ -105,13 +131,18 @@ export const useCellStore = create<CellState>((set) => ({
       // resolve last, a last-write-wins race that only shows up on a slow
       // connection — exactly when a live demo is running.
       if (requestId !== selectSampleRequestId) return
-      set({ toolpath, toolpathLoadStatus: 'ready' })
+      // Trajectory compile runs here, still inside the stale-request guard
+      // above and before any further await — so an older selection's
+      // compile can never land after a newer selection has already reset
+      // the store (03-01-PLAN.md must_haves).
+      const trajectory = compileTrajectory(toolpath)
+      set({ toolpath, toolpathLoadStatus: 'ready', trajectory, scrubFraction: 0 })
     } catch (err) {
       console.error('Failed to load g-code sample:', err)
       // Same discard on the failure path: a slow failure must not stamp an
       // error status over a newer selection that already succeeded.
       if (requestId !== selectSampleRequestId) return
-      set({ toolpathLoadStatus: 'error', toolpath: null })
+      set({ toolpathLoadStatus: 'error', toolpath: null, trajectory: null })
     }
   },
 }))
