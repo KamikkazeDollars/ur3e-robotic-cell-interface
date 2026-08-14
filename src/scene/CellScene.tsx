@@ -7,6 +7,7 @@ import ToolpathCameraFit from './ToolpathCameraFit'
 import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET, FLOOR_Z_CENTER } from './RailRig'
 import Workbench from './Workbench'
 import Toolpath from './Toolpath'
+import ScrubMarker from './ScrubMarker'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
 
@@ -23,7 +24,10 @@ const SECONDARY_TONE = '#E4E7EB'
  *   -> Workbench (plan 02-04, scene furniture the toolpath visually rests
  *      on — mounted between the rig and the toolpath) -> Toolpath (plan
  *      02-01, mounted after the workbench, before OrbitControls) ->
- *      OrbitControls (makeDefault) -> NavCube -> CameraResetListener
+ *      ScrubMarker (plan 03-03, D-07 current-scrub-position indicator —
+ *      mounted immediately after Toolpath since it rides that same drawn
+ *      line, still before OrbitControls) -> OrbitControls (makeDefault) ->
+ *      NavCube -> CameraResetListener
  *   -> ToolpathCameraFit (plan 02-03, mounted after CameraResetListener —
  *      D-05's toolpath fit is a distinct behaviour from the Reset View
  *      default framing the listener restores)
@@ -83,6 +87,11 @@ export default function CellScene() {
             toolpath for whichever bundled sample is selected. Points arrive
             already in world space, so no wrapping group/transform here. */}
         <Toolpath />
+
+        {/* D-07 (plan 03-03): the current-scrub-position indicator riding
+            the toolpath above, driven from the same trajectory sample index
+            that poses the robot (SIM-05). */}
+        <ScrubMarker />
 
         <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />
