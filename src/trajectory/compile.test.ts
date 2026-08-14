@@ -120,6 +120,21 @@ describe('compileTrajectory', () => {
     expect(boundarySample!.scrubFraction).toBeLessThan(1)
   })
 
+  it('every sample carries singularityFlags whose `any` field agrees with the disjunction of the other three', () => {
+    // Deliberately no assertion on specific flag VALUES: this toolpath is
+    // not constructed to pass through a singularity, so pinning a
+    // particular outcome would encode an accident of the sample rather than
+    // a contract (see `classifySingularity.test.ts` for the family-level
+    // coverage against deliberately-chosen singular joint tuples).
+    for (const sample of result.samples) {
+      const { wrist, shoulder, elbow, any } = sample.singularityFlags
+      expect(typeof wrist).toBe('boolean')
+      expect(typeof shoulder).toBe('boolean')
+      expect(typeof elbow).toBe('boolean')
+      expect(any).toBe(wrist || shoulder || elbow)
+    }
+  })
+
   it('the travel move is genuinely composed of multiple independent solves, not a single synthesised hop (SIM-05)', () => {
     const flattened = flattenToolpathPoints(toolpath.segments)
     const boundaryFraction = result.samples.find(

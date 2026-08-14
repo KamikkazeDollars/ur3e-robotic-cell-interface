@@ -15,7 +15,9 @@ import {
   pickClosestBranch,
   forwardKinematics,
   UR3E_PARKED_POSE,
+  classifySingularity,
   type JointAngles,
+  type SingularityFlags,
 } from '../kinematics'
 import { flattenToolpathPoints, buildArcLengthTable, pointAtFraction, type ArcLengthTable } from './arc-length'
 
@@ -91,8 +93,7 @@ export type TrajectoryStatus = 'ready' | 'frozen-at-unreachable'
 /** One compiled point along the trajectory — either a prepended
  * home-to-toolpath-start TRAVEL sample or a toolpath sample proper (see
  * `compileTrajectory`'s doc comment for the two-phase scrubFraction
- * layout). Note: plan 03-02 adds a `singularityFlags` field — consumers
- * should not assume this shape is final within Phase 3. */
+ * layout). */
 export interface TrajectorySample {
   /** Cumulative arc-length fraction in [0, 1] over the WHOLE compiled
    * path (travel move + toolpath combined), monotonically non-decreasing
@@ -115,6 +116,14 @@ export interface TrajectorySample {
   /** `forwardKinematics(joints, railPos - RAIL_CENTER_X).tcpPosition` — an
    * FK-verified readout, never a re-derivation. */
   tcpPosition: { x: number; y: number; z: number }
+  /** D-08: wrist/shoulder/elbow singularity classification of `joints`,
+   * computed once at compile time (`classifySingularity`) so Phase 5's
+   * Dashboard can read it without deriving new kinematics. An observation
+   * recorded about the chosen pose, never a filter — a singular
+   * classification must never affect branch selection or acceptance above
+   * (a future reader could reasonably assume flagged samples were meant to
+   * be rejected; they are not). */
+  singularityFlags: SingularityFlags
 }
 
 export interface CompiledTrajectory {
@@ -315,8 +324,12 @@ export function compileTrajectory(toolpath: ParsedToolpath): CompiledTrajectory 
       const scrubFraction = localArcLength / safeTotalLength
 
       const tcpPosition = forwardKinematics(chosen, railOffsetFromCenter).tcpPosition
+      // Recorded alongside `tcpPosition` as another read-only observation of
+      // the chosen pose — see the field's own doc comment on why this never
+      // influences `chosen` above.
+      const singularityFlags = classifySingularity(chosen)
 
-      samples.push({ scrubFraction, point, joints: chosen, railPos, tcpPosition })
+      samples.push({ scrubFraction, point, joints: chosen, railPos, tcpPosition, singularityFlags })
       previousJoints = chosen
     }
   }
