@@ -4,10 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* UI-SPEC design-token layer (plan 01-03) — spacing, typography, and color
-   roles declared once here as CSS custom properties so every later phase's
-   tabs, Dashboard panels, operations tree, and I/O list inherit one
-   vocabulary instead of re-deriving it. */
+/* UI-SPEC design-token layer (plan 01-03, re-themed quick plan 260815-3cn) —
+   spacing, typography, and color roles declared once here as CSS custom
+   properties so every later phase's tabs, Dashboard panels, operations tree,
+   and I/O list inherit one vocabulary instead of re-deriving it.
+
+   Color roles are named `--ui-*` rather than Tailwind's reserved `--color-*`
+   namespace on purpose: the `@theme inline` block below re-declares
+   `--color-secondary` / `--color-accent` / `--color-destructive` as aliases
+   of the shadcn `--secondary` / `--accent` / `--destructive` variables, and
+   `@theme inline` is emitted later, so it always wins the cascade. Under the
+   old `--color-*` names this silently resolved every "role token" usage to
+   the *shadcn* variable, not the UI-SPEC one they were declared next to. The
+   `--ui-*` prefix keeps this layer the single, undisputed source of truth. */
 :root {
   /* Spacing scale — all multiples of 4px (01-UI-SPEC.md "Spacing Scale") */
   --space-xs: 4px;
@@ -32,12 +41,27 @@
   --weight-regular: 400;
   --weight-semibold: 600;
 
-  /* Color roles (01-UI-SPEC.md "Color"). Destructive is declared but applied
-     nowhere this phase — no destructive action exists yet. */
-  --color-dominant: #fafafa;
-  --color-secondary: #e4e7eb;
-  --color-accent: #2563eb;
-  --color-destructive: #dc2626;
+  /* Monospace stack reserved for numeric telemetry (Phase 5 Dashboard —
+     joint angles, TCP position, rail position). Declared here, alongside
+     the rest of the type scale, ahead of its first real consumer. */
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* Color roles — Red + Dark Grey (01-UI-SPEC.md "Color", re-themed). */
+  --ui-dominant: #1c1e21; /* page background / WebGL canvas clear color (60%) */
+  --ui-surface: #26292e; /* panel and card surfaces (30%) */
+  --ui-surface-raised: #30343a; /* selected/hovered tab, input backgrounds */
+  --ui-border: #3c4149; /* hairlines, panel dividers, input borders */
+  --ui-fg: #f2f3f5; /* primary text */
+  --ui-fg-muted: #a2a8b2; /* labels, secondary/passive text, placeholder dashes */
+  --ui-accent: #e11d2e; /* the red — active tab indicator, primary CTA, nav-cube hover (10%) */
+  --ui-accent-fg: #ffffff; /* text on accent fill */
+  --ui-destructive: #f97066; /* kept distinct from --ui-accent; unused this plan */
+
+  /* Shell geometry — read by both the shell's own fixed layout (TabRail,
+     TabPanel, ModeBar) and App.tsx's pre-existing overlay offset, so the
+     two can never drift apart. */
+  --shell-rail-width: 84px;
+  --shell-panel-width: 320px;
 }
 
 /* Minimal reset + page background. plan 01-03 owns the full design-token layer. */
@@ -57,7 +81,7 @@ body,
 
 body {
   /* UI-SPEC Dominant tone — keeps DOM chrome consistent with the WebGL canvas clear color */
-  background: #fafafa;
+  background: var(--ui-dominant);
   font-family:
     -apple-system,
     'Segoe UI',
@@ -108,28 +132,28 @@ body {
 
 :root {
   --radius: 0.625rem;
-  /* Mapped onto the UI-SPEC Dominant/Accent tokens above (plan 01-03 Task 1
-     Step 3) so the generated Button renders as the phase's one accent CTA
-     with no per-component color override, and the page background matches
-     the WebGL canvas clear color plan 01-01 set. */
-  --background: var(--color-dominant);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: var(--color-accent);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Mapped onto the --ui-* role tokens above (quick plan 260815-3cn Task 1
+     Step 4) so :root itself is the dark theme — this app never applies a
+     `.dark` class, so the shadcn variables must resolve to the dark palette
+     directly here, not through the trailing (dead) `.dark` block below. */
+  --background: var(--ui-dominant);
+  --foreground: var(--ui-fg);
+  --card: var(--ui-surface);
+  --card-foreground: var(--ui-fg);
+  --popover: var(--ui-surface);
+  --popover-foreground: var(--ui-fg);
+  --primary: var(--ui-accent);
+  --primary-foreground: var(--ui-accent-fg);
+  --secondary: var(--ui-surface-raised);
+  --secondary-foreground: var(--ui-fg);
+  --muted: var(--ui-surface-raised);
+  --muted-foreground: var(--ui-fg-muted);
+  --accent: var(--ui-surface-raised);
+  --accent-foreground: var(--ui-fg);
+  --destructive: var(--ui-destructive);
+  --border: var(--ui-border);
+  --input: var(--ui-border);
+  --ring: var(--ui-accent);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

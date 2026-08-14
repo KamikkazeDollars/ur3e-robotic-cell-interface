@@ -1,10 +1,8 @@
 import { useCellStore } from '../store/cellStore'
 import { SCENE_STATUS_COPY, toolpathStatusCopy } from './scene-status-copy'
 
-// UI-SPEC "Color" — chrome stays in the Secondary tone; Accent is reserved
+// UI-SPEC "Color" — chrome stays in the surface tone; Accent is reserved
 // for the nav-cube hover state and the Reset View CTA only.
-const SECONDARY_TONE = '#E4E7EB'
-
 const panelStyle: React.CSSProperties = {
   position: 'fixed',
   top: '50%',
@@ -16,11 +14,11 @@ const panelStyle: React.CSSProperties = {
   gap: 'var(--space-sm)',
   padding: 'var(--space-md) var(--space-lg)',
   borderRadius: '8px',
-  background: SECONDARY_TONE,
+  background: 'var(--ui-surface)',
   fontSize: 'var(--text-body)',
   lineHeight: 'var(--leading-body)',
   fontWeight: 'var(--weight-regular)',
-  color: '#08060d',
+  color: 'var(--ui-fg)',
 }
 
 /**
@@ -68,8 +66,8 @@ export default function SceneStatusOverlay() {
             width: '1em',
             height: '1em',
             borderRadius: '50%',
-            border: '2px solid #08060d33',
-            borderTopColor: '#08060d',
+            border: '2px solid var(--ui-border)',
+            borderTopColor: 'var(--ui-fg)',
             animation: 'gsd-scene-status-spin 0.8s linear infinite',
           }}
         />

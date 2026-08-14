@@ -5,8 +5,8 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: Inverse Kinematics + Trajectory Compile + Scrub
 status: executing
-stopped_at: Completed 03-02-PLAN.md and 03-03-PLAN.md (Phase 03 wave 2 complete)
-last_updated: "2026-08-14T17:53:11.188Z"
+stopped_at: Completed quick task 260815-3cn (UI shell scaffold + Red/Dark-Grey retheme)
+last_updated: "2026-08-14T23:43:57.856Z"
 last_activity: 2026-08-14
 last_activity_desc: Phase 03 wave 2 complete (03-02, 03-03)
 progress:
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | Phase 03 P01 | 240min | 2 tasks | 17 files |
 | Phase 03 P02 | 7min | 3 tasks | 10 files |
 | Phase 03 P03 | 20min | 2 tasks | 3 files |
+| Phase quick P260815-3cn | 20min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase ?]: RailRig reads trajectory.railPos via a reactive Zustand selector (not useFrame), matching the store's coarse-cadence performance discipline
 - [Phase ?]: Chose #0F766E deep teal for the D-07 scrub marker, distinct from rapid/cutting/accent tones
 - [Phase ?]: ScrubMarker.tsx duplicates RobotPose.tsx's sample-index derivation verbatim rather than sharing a helper, so the marker and the robot pose can never silently drift apart (SIM-05)
+- [Phase ?]: [Quick 260815-3cn]: Renamed UI-SPEC role tokens from Tailwind-reserved --color-* to --ui-* — fixed a real bug where @theme inline silently overrode --color-secondary/-accent/-destructive with shadcn's own variables
+- [Phase ?]: [Quick 260815-3cn]: Stood up static Phase 5-8 UI shell scaffolding (7-tab rail, mode bar, placeholder panels) ahead of Phase 4 playback engine, per requirements_status: scaffold-only — no data wired, no behaviour implemented
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-14T17:53:11.162Z
-Stopped at: Completed 03-02-PLAN.md and 03-03-PLAN.md (Phase 03 wave 2 complete)
+Last session: 2026-08-14T23:43:57.833Z
+Stopped at: Completed quick task 260815-3cn (UI shell scaffold + Red/Dark-Grey retheme)
 Resume file: None

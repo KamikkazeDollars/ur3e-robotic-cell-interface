@@ -12,10 +12,10 @@ import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-default
 import { RAIL_CENTER_X } from '../kinematics'
 import { useCellStore } from '../store/cellStore'
 
-// UI-SPEC Dominant / Secondary tones — kept in sync with the DOM background (index.css)
+// UI-SPEC Dominant / Border tones — kept in sync with the DOM background (index.css)
 // so the WebGL canvas and the surrounding page chrome don't clash (D-06).
-const DOMINANT_TONE = '#FAFAFA'
-const SECONDARY_TONE = '#E4E7EB'
+const DOMINANT_TONE = '#1C1E21'
+const SECONDARY_TONE = '#3C4149'
 
 /**
  * R3F Canvas composition root — the phase's "one real route" analogue.
