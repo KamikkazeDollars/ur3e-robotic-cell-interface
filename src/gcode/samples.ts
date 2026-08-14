@@ -21,4 +21,9 @@ export const GCODE_SAMPLES: readonly GcodeSample[] = [
     label: 'Print sample — 3-layer square perimeter',
     filePath: '/gcode/print-sample.gcode',
   },
+  {
+    id: 'mill',
+    label: 'Mill sample — rounded-rectangle contour, 3 depth passes',
+    filePath: '/gcode/mill-sample.gcode',
+  },
 ]
