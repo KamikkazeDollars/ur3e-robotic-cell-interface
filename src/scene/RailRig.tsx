@@ -27,10 +27,18 @@ const END_STOP_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.02 // spans both ra
 // Carriage — a linear-guide-block silhouette: a wide base "shoe" plate that
 // bridges both rails, plus a smaller raised mounting block the robot sits on.
 const CARRIAGE_BASE_WIDTH = 0.34
-const CARRIAGE_BASE_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.06
+/** Carriage base "shoe" plate's own depth (Pitfall D — exported so
+ * `src/gcode/toolpath-anchor.ts` (D-06) can derive the carriage's real
+ * forward-most face instead of a reach-envelope fraction unrelated to the
+ * rig's actual footprint). */
+export const CARRIAGE_BASE_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.06
 const CARRIAGE_BASE_HEIGHT = 0.05
 const CARRIAGE_BLOCK_WIDTH = 0.22
-const CARRIAGE_BLOCK_DEPTH = 0.22
+/** Carriage mounting block's own depth (Pitfall D — exported so
+ * `src/gcode/toolpath-anchor.ts` (D-06) can derive the carriage's real
+ * forward-most face instead of a reach-envelope fraction unrelated to the
+ * rig's actual footprint). */
+export const CARRIAGE_BLOCK_DEPTH = 0.22
 const CARRIAGE_BLOCK_HEIGHT = 0.1
 
 /** Overall rail run length, exported for CellScene's footprint-sized floor
