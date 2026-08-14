@@ -1,19 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 03-inverse-kinematics-trajectory-compile-scrub
 source: [03-VERIFICATION.md, Phase three problems.md]
 started: 2026-08-14T18:26:44Z
-updated: 2026-08-14T18:33:29Z
+updated: 2026-08-14T18:41:00Z
 ---
 
 ## Current Test
 
-number: 2
-name: Marker/robot pose correspondence from a live orbiting camera
-expected: |
-  During a scrub drag, confirm the teal scrub marker visually reads as sitting at the exact point the robot's tool is reaching, from an orbiting camera (not just fixed screenshot angles).
-  The marker and the arm's tool tip never visibly diverge at any scrub position.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -25,7 +20,7 @@ severity: blocker
 
 ### 2. Marker/robot pose correspondence from a live orbiting camera
 expected: During a scrub drag, confirm the teal scrub marker visually reads as sitting at the exact point the robot's tool is reaching, from an orbiting camera (not just fixed screenshot angles). The marker and the arm's tool tip never visibly diverge at any scrub position.
-result: [pending]
+result: pass
 
 ### 3. Known open issue — home-to-toolpath travel-move table clipping
 expected: Drag the scrub control through the home-to-toolpath travel-move portion (roughly the first few percent, before the arm reaches the toolpath's first point) for both bundled samples, watching for the arm visually passing through the table geometry. The arm's travel move stays clear of the table at all times.
@@ -58,9 +53,9 @@ reason: "Deferred follow-up: Maybe it's better for this to be on the 4th phase b
 ## Summary
 
 total: 7
-passed: 0
+passed: 1
 issues: 4
-pending: 1
+pending: 0
 skipped: 2
 blocked: 0
 
