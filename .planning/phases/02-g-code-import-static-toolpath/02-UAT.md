@@ -1,27 +1,21 @@
 ---
-status: testing
+status: complete
 phase: 02-g-code-import-static-toolpath
 source: [02-VERIFICATION.md, user: "Phase two problems.md"]
 started: 2026-08-14T10:30:00Z
-updated: 2026-08-14T11:15:00Z
+updated: 2026-08-14T11:40:00Z
 ---
 
 ## Current Test
 
-number: 6
-name: Nav cube axis-triad visibility
-expected: |
-  The XYZ axis triad on the navigation cube's back corner is visible through
-  the cube's faces, not fully occluded by them.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Print sample visual render
 expected: Toolpath in front of the robot on the floor, dashed gray rapids, solid thicker warm cutting line, clearly distinguishable in greyscale.
-result: issue
-reported: "User (via Phase two problems.md, items 1-4): position is too low (should sit above the rail rig, roughly half the robot's height); the toolpath sits behind/under the rail rig's carriage instead of clearly in front of it with a visible gap; there is no workbench/table for it to rest on — it just floats over the bare floor plane; the lines are too thin and there's no way to see where each operation starts/ends (wants thicker orange bullet-point markers)."
-severity: major
+result: pass
+note: "Original issue (position/clearance/workbench/line-thickness) resolved by gap-closure plans 02-04 and 02-05, re-verified live in browser: toolpath now rests on a visible workbench well clear of the carriage, lines are thicker, and start/end markers render as full orange spheres (a marker-clipping regression found during this re-check was fixed directly — see commit 8921e1d)."
 
 ### 2. Mill sample visual render
 expected: 3 depth passes at visibly distinct heights, smooth curved corners (not chorded), no seam at arc-to-line junctions.
@@ -41,15 +35,14 @@ result: orchestrator pre-check — "Samples are interpreted in mm." is visible b
 
 ### 6. Nav cube axis-triad visibility
 expected: The XYZ axis triad on the navigation cube's back corner is visible through the cube's faces, not fully occluded by them.
-result: issue
-reported: "User (via Phase two problems.md, item 5): cube opacity should be reduced so the XYZ axes are visible."
-severity: cosmetic
+result: pass
+note: "Resolved by gap-closure plan 02-05 (opacity=0.6 on GizmoViewcube). Re-verified live: all three axis arrows and all six face labels visible simultaneously."
 
 ## Summary
 
 total: 6
-passed: 4
-issues: 2
+passed: 6
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -58,7 +51,9 @@ blocked: 0
 
 - gap_id: G-02-01
   truth: "The toolpath sits well above floor level (roughly half the robot's height) on a visible workbench, not floating over the bare floor."
-  status: failed
+  status: resolved
+  resolved_by: 02-04-PLAN.md
+  resolved_at: 2026-08-14
   reason: "User reported (Phase two problems.md #1, #3): print position too low; needs a workbench under it since resting directly on the floor plane reads as illogical."
   severity: major
   test: 1
@@ -67,7 +62,9 @@ blocked: 0
   missing: ["A Workbench scene component (new mesh) whose top surface height becomes the new TOOLPATH_ANCHOR_OFFSET.y target", "toolpath-anchor.test.ts assertions updated for the new anchor height"]
 - gap_id: G-02-02
   truth: "The toolpath sits clearly in front of the robot/rail rig's carriage with a visible clearance gap, never overlapping or reading as underneath it."
-  status: failed
+  status: resolved
+  resolved_by: 02-04-PLAN.md
+  resolved_at: 2026-08-14
   reason: "User reported (Phase two problems.md #2): trajectory shouldn't be behind/under the rig; needs more distance from it."
   severity: major
   test: 1
@@ -76,7 +73,9 @@ blocked: 0
   missing: ["Anchor Z derivation that adds explicit clearance beyond CARRIAGE_BASE_DEPTH/2 (or CARRIAGE_BLOCK_DEPTH/2, whichever is the true forward-most rig extent), not just a flat fraction of the reach envelope", "toolpath-anchor.test.ts assertion that both samples' near-Z-edge clears the carriage's front face by a positive, named margin"]
 - gap_id: G-02-03
   truth: "The rendered toolpath lines are visibly thicker, and the start and end of the toolpath are marked with clearly visible, thicker point markers in the same warm-orange family."
-  status: failed
+  status: resolved
+  resolved_by: 02-05-PLAN.md
+  resolved_at: 2026-08-14
   reason: "User reported (Phase two problems.md #4): make the trajectory line thicker; add start/end bullet-point markers, same orange, thicker than the line."
   severity: minor
   test: 1
@@ -85,7 +84,9 @@ blocked: 0
   missing: ["Increased lineWidth on both Line batches", "Small sphere/marker meshes at toolpath.segments[0].points[0] (start) and the last point of the last segment (end), colored CUTTING_COLOR, sized visibly larger than the line width"]
 - gap_id: G-02-04
   truth: "The navigation cube's XYZ axis triad is visible through the cube's faces."
-  status: failed
+  status: resolved
+  resolved_by: 02-05-PLAN.md
+  resolved_at: 2026-08-14
   reason: "User reported (Phase two problems.md #5): cube opacity should be reduced so axes show through."
   severity: cosmetic
   test: 6
