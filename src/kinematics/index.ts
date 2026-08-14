@@ -18,6 +18,13 @@ export {
 } from './forward-kinematics';
 
 export {
+  classifySingularity,
+  SINGULARITY_ANGLE_EPSILON,
+  SINGULARITY_DISTANCE_EPSILON,
+  type SingularityFlags,
+} from './singularity';
+
+export {
   RAIL_TRAVEL,
   RAIL_CENTER_X,
   railRemainingTravel,

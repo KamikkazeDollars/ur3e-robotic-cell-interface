@@ -17,6 +17,12 @@ export const SCENE_STATUS_COPY = {
   error: "Couldn't load the robot model. Check your connection and reload the page.",
   toolpathParsing: 'Parsing g-code…',
   toolpathError: "Couldn't load that sample. Check your connection and try again.",
+  // D-06/SIM-05: a fixed string with no interpolation — the numeric detail
+  // (samples reached vs. intended) is composed at the call site, the same
+  // way `SampleSelect.tsx`'s existing skipped-command note composes its own
+  // count, so this copy contract can never accidentally become a template
+  // for a caught exception's text.
+  trajectoryFrozen: "Part of this toolpath is beyond the robot's reach. The robot is held at the last reachable point.",
 } as const
 
 /**

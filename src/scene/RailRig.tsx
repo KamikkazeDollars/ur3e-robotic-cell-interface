@@ -1,4 +1,5 @@
 import { RAIL_TRAVEL, RAIL_CENTER_X } from '../kinematics'
+import { useCellStore } from '../store/cellStore'
 import RobotModel from './RobotModel'
 
 // UI-SPEC Secondary tone (#E4E7EB) — track, end-stops, and carriage recede
@@ -110,16 +111,27 @@ const RAIL_Z_OFFSETS = [-RAIL_GAP / 2, RAIL_GAP / 2] as const
 /**
  * The 7th external linear-rail axis (D-02): twin parallel guide rails
  * running along world x, discrete end-stop blocks at both physical travel
- * limits (D-07), and a slider-block carriage — carrying the UR3e — parked
- * at the centre of the travel range for this phase's static pose (D-09).
+ * limits (D-07), and a slider-block carriage — carrying the UR3e.
  *
- * Every dimension that relates to travel (rail span, end-stop positions,
- * carriage position) is derived from `RAIL_TRAVEL` / `RAIL_CENTER_X`,
- * imported from the kinematics barrel — never restated as a literal here —
- * so this geometry and Phase 5's remaining-travel readout are provably
- * reading one shared definition, per the plan's rail-agreement prohibition.
+ * Every dimension that relates to travel (rail span, end-stop positions)
+ * is derived from `RAIL_TRAVEL` / `RAIL_CENTER_X`, imported from the
+ * kinematics barrel — never restated as a literal here — so this geometry
+ * and Phase 5's remaining-travel readout are provably reading one shared
+ * definition, per the plan's rail-agreement prohibition.
+ *
+ * Plan 03-02: the carriage's X is now DERIVED from the compiled
+ * trajectory's own resolved rail position (`trajectory.railPos`), read via
+ * a reactive Zustand selector — not a per-frame `useFrame` mutation like
+ * `RobotPose.tsx`'s imperative pose driver, because this value changes at
+ * most once per sample selection (`compileTrajectory` resolves one rail
+ * position for the whole toolpath, D-01), exactly the coarse cadence the
+ * store header sanctions for React-state writes. With no trajectory loaded
+ * (nothing selected yet) it falls back to `RAIL_CENTER_X`, so the carriage
+ * renders at the rail's centre of travel exactly as it did in Phase 1.
  */
 export default function RailRig() {
+  const railPos = useCellStore((state) => state.trajectory?.railPos ?? RAIL_CENTER_X)
+
   return (
     <group>
       {RAIL_Z_OFFSETS.map((z) => (
@@ -140,11 +152,12 @@ export default function RailRig() {
         <meshStandardMaterial color={SECONDARY_TONE} />
       </mesh>
 
-      {/* Carriage — parked at travel centre (D-09), carrying the robot as
-          its child (the official UR3e URDF has no rail joint; the rail is
-          this project's own scene-graph composition, not part of the
-          description). */}
-      <group position={[RAIL_CENTER_X, 0, 0]}>
+      {/* Carriage — X derived from the trajectory compiler's resolved rail
+          position (or RAIL_CENTER_X with nothing loaded), carrying the
+          robot as its child (the official UR3e URDF has no rail joint; the
+          rail is this project's own scene-graph composition, not part of
+          the description). */}
+      <group position={[railPos, 0, 0]}>
         <mesh position={[0, CARRIAGE_BASE_CENTER_Y, 0]} castShadow>
           <boxGeometry args={[CARRIAGE_BASE_WIDTH, CARRIAGE_BASE_HEIGHT, CARRIAGE_BASE_DEPTH]} />
           <meshStandardMaterial color={SECONDARY_TONE} />
