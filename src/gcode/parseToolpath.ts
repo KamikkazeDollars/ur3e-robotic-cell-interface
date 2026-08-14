@@ -15,6 +15,7 @@ import type { GCodeWord } from 'gcode-parser'
 import Toolpath from 'gcode-toolpath'
 import type { GCodeModal, GCodeVector, ToolpathInterpreter } from 'gcode-toolpath'
 import { TOOLPATH_ANCHOR_OFFSET } from './toolpath-anchor'
+import { tessellateArc } from './arcTessellation'
 
 export type MoveClass = 'rapid' | 'cut'
 
@@ -36,9 +37,14 @@ export interface ClassifiedSegment {
 export interface ParsedToolpath {
   segments: ClassifiedSegment[]
   unit: 'mm'
-  /** Motion commands that produced no segment yet — this plan leaves arc
-   * (G2/G3) tessellation for plan 02-02, so every G2/G3 line increments this
-   * counter instead of emitting a segment. */
+  /** Commands the parser refused rather than rendered: a command carrying a
+   * non-finite (NaN/Infinity) coordinate (T-02-02 — a single such value
+   * would silently poison the bounding box and therefore the camera fit),
+   * or a command received after `MAX_TOOLPATH_SEGMENTS` accepted segments
+   * (the defensive ceiling). Never zero-length motion, which is dropped
+   * silently as a normal no-op, not a refusal. Plan 02-03 should surface a
+   * non-zero value here to the user instead of silently rendering a
+   * partial path. */
   skippedMotionCount: number
   /** The exact D-06 anchor translation applied to every retained point
    * (scene metres), so the transform is inspectable rather than implicit. */
@@ -50,13 +56,32 @@ export interface ParsedToolpath {
 
 const MM_TO_M = 1 / 1000
 
+/** Defensive ceiling on the number of segments this parser will accept
+ * (T-02-02, Security Domain V5): a four-figure bound is far above anything
+ * either hand-authored bundled sample produces (D-08), while still bounding
+ * a future upload feature's worst case so a runaway/malformed file is
+ * truncated — reporting the drop count via `skippedMotionCount` — rather
+ * than freezing the tab. */
+export const MAX_TOOLPATH_SEGMENTS = 5000
+
 /** Maps a g-code point (mm, g-code axes) to a scene point (metres, scene
  * axes), matching `RobotModel.tsx`'s `rotation.x = -Math.PI / 2` frame
  * convention: scene x is g-code x, scene y is g-code z, scene z is the
  * negated g-code y. This is the single, one-place unit conversion and axis
- * remap this module performs — no rounding, truncation or clamping. */
-function toScenePoint(v: GCodeVector): [number, number, number] {
-  return [v.x * MM_TO_M, v.z * MM_TO_M, -v.y * MM_TO_M]
+ * remap this module performs — no rounding, truncation or clamping. Reused
+ * verbatim for both line endpoints and every tessellated arc point, so
+ * there is exactly one conversion site regardless of segment source. */
+function toScenePoint(v: readonly [number, number, number]): [number, number, number] {
+  return [v[0] * MM_TO_M, v[2] * MM_TO_M, -v[1] * MM_TO_M]
+}
+
+/** True only if every component is a finite number — rejects NaN, +/-Infinity,
+ * and (defensively) any non-numeric value a malformed line could produce.
+ * Must run upstream of the bounds pass (T-02-02): one non-finite coordinate
+ * would otherwise silently poison the bounding box and therefore the
+ * camera fit. */
+function isFiniteVector(v: GCodeVector): boolean {
+  return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
 }
 
 /** Independent feed-rate pre-scan (02-RESEARCH.md Pattern 2): carries the
@@ -94,8 +119,11 @@ function extractFeedRateQueue(gcodeText: string): (number | null)[] {
 
 interface RawSegment {
   type: MoveClass
-  motion: 'G0' | 'G1'
-  points: [GCodeVector, GCodeVector]
+  motion: 'G0' | 'G1' | 'G2' | 'G3'
+  source: 'line' | 'arc'
+  /** Raw mm, g-code-axis points (pre `toScenePoint`) — two for a line, the
+   * whole tessellated polyline for an arc. */
+  points: [number, number, number][]
   feedRate: number | null
 }
 
@@ -119,23 +147,74 @@ export function parseToolpath(gcodeText: string): ParsedToolpath {
     // the tool position unchanged) rather than emitting a degenerate point.
     if (v1.x === v2.x && v1.y === v2.y && v1.z === v2.z) return
 
+    // Reject non-finite coordinates upstream of the bounds pass (T-02-02) —
+    // count the refusal, never throw, never let a NaN/Infinity reach a
+    // Vector3 or the bounding-box computation.
+    if (!isFiniteVector(v1) || !isFiniteVector(v2)) {
+      skippedMotionCount += 1
+      return
+    }
+
+    // Defensive segment ceiling (T-02-02): stop accepting new segments once
+    // reached, counting every further command dropped instead of hanging.
+    if (rawSegments.length >= MAX_TOOLPATH_SEGMENTS) {
+      skippedMotionCount += 1
+      return
+    }
+
     // `modal` is a mutable object reference reused across every callback —
     // read `motion` synchronously, right now, never store the object itself.
     const motion = modal.motion === 'G0' ? 'G0' : 'G1'
     rawSegments.push({
       type: motion === 'G0' ? 'rapid' : 'cut',
       motion,
-      points: [v1, v2],
+      source: 'line',
+      points: [
+        [v1.x, v1.y, v1.z],
+        [v2.x, v2.y, v2.z],
+      ],
       feedRate,
     })
   }
 
-  const addArcCurve = () => {
-    // Arc tessellation lands in plan 02-02; this plan only accounts for the
-    // skipped motion so the queue stays aligned with subsequent addLine
-    // calls and nothing is silently dropped without a trace.
+  const addArcCurve = (modal: GCodeModal, v1: GCodeVector, v2: GCodeVector, v0: GCodeVector) => {
+    const feedRate = feedRateQueue[feedRateIndex] ?? null
     feedRateIndex += 1
-    skippedMotionCount += 1
+
+    // Reject non-finite coordinates upstream of the bounds pass (T-02-02),
+    // same discipline as addLine — v0 is the arc CENTER (verified via
+    // source read, 02-RESEARCH.md Pattern 1; the library's own inline
+    // comment calling it a "fixed point" is misleading).
+    if (!isFiniteVector(v1) || !isFiniteVector(v2) || !isFiniteVector(v0)) {
+      skippedMotionCount += 1
+      return
+    }
+
+    if (rawSegments.length >= MAX_TOOLPATH_SEGMENTS) {
+      skippedMotionCount += 1
+      return
+    }
+
+    // Direction is read from modal.motion ('G2' clockwise / 'G3'
+    // counter-clockwise), never inferred from a boolean — the interpreter
+    // does not pass one (02-RESEARCH.md Pattern 1).
+    const motion = modal.motion === 'G2' ? 'G2' : 'G3'
+    const center: [number, number, number] = [v0.x, v0.y, v0.z]
+    const start: [number, number, number] = [v1.x, v1.y, v1.z]
+    const end: [number, number, number] = [v2.x, v2.y, v2.z]
+
+    // One arc command yields one segment whose points array holds the
+    // whole tessellated polyline — not one segment per tessellated chord —
+    // so the segment count stays a count of g-code commands.
+    const points = tessellateArc(center, start, end, motion)
+
+    rawSegments.push({
+      type: 'cut',
+      motion,
+      source: 'arc',
+      points,
+      feedRate,
+    })
   }
 
   const toolpath = new Toolpath({ addLine, addArcCurve }) as ToolpathInterpreter
@@ -144,7 +223,7 @@ export function parseToolpath(gcodeText: string): ParsedToolpath {
   const segments: ClassifiedSegment[] = rawSegments.map((raw) => ({
     type: raw.type,
     motion: raw.motion,
-    source: 'line',
+    source: raw.source,
     feedRate: raw.feedRate,
     points: raw.points.map(toScenePoint),
   }))
