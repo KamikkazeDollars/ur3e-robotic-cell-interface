@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { parseToolpath } from './parseToolpath'
-import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET } from './toolpath-anchor'
+import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET, CARRIAGE_FRONT_FACE_Z } from './toolpath-anchor'
 import { ROBOT_REACH_ENVELOPE, RIG_Z_OFFSET, CARRIAGE_TOP_Y } from '../scene/RailRig'
 import { forwardKinematics, UR3E_READY_POSE, RAIL_CENTER_X } from '../kinematics'
 
@@ -66,5 +66,29 @@ describe('D-06 anchor: ready-pose TCP world position sits above the anchor and w
       worldZ - TOOLPATH_ANCHOR_OFFSET.z,
     )
     expect(horizontalDistance).toBeLessThan(ROBOT_REACH_ENVELOPE)
+  })
+})
+
+describe('D-06 anchor: bundled samples clear the carriage front face (G-02-02)', () => {
+  it("the anchored print sample's near (mount-facing) edge clears CARRIAGE_FRONT_FACE_Z", () => {
+    const result = parseToolpath(readSample('public/gcode/print-sample.gcode'))
+    let minZ = Infinity
+    for (const segment of result.segments) {
+      for (const point of segment.points) {
+        minZ = Math.min(minZ, point[2])
+      }
+    }
+    expect(minZ).toBeGreaterThan(CARRIAGE_FRONT_FACE_Z)
+  })
+
+  it("the anchored mill sample's near (mount-facing) edge clears CARRIAGE_FRONT_FACE_Z", () => {
+    const result = parseToolpath(readSample('public/gcode/mill-sample.gcode'))
+    let minZ = Infinity
+    for (const segment of result.segments) {
+      for (const point of segment.points) {
+        minZ = Math.min(minZ, point[2])
+      }
+    }
+    expect(minZ).toBeGreaterThan(CARRIAGE_FRONT_FACE_Z)
   })
 })
