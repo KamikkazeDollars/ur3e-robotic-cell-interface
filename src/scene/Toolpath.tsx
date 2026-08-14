@@ -65,6 +65,21 @@ export default function Toolpath() {
 
   const { rapidPoints, cuttingPoints } = buckets
 
+  // The toolpath's own minimum Y is translated exactly onto the workbench
+  // anchor's Y (parseToolpath.ts, D-06) — so a marker sitting at the
+  // toolpath's lowest point is centered exactly on the tabletop surface. A
+  // sphere centered there sinks half its radius below that opaque surface
+  // and gets clipped by it (visible as a cut-off dome, not a full sphere).
+  // Lifting the marker by its own radius keeps its BOTTOM at the point
+  // instead of its centre, so it always rests visibly on top of the
+  // workbench, regardless of which specific point ends up being the
+  // start/end for a given sample.
+  const liftMarker = (point: readonly [number, number, number]): [number, number, number] => [
+    point[0],
+    point[1] + MARKER_RADIUS,
+    point[2],
+  ]
+
   return (
     <>
       {rapidPoints.length > 0 && (
@@ -83,11 +98,11 @@ export default function Toolpath() {
       )}
       {endpoints && (
         <>
-          <mesh position={endpoints.start}>
+          <mesh position={liftMarker(endpoints.start)}>
             <sphereGeometry args={[MARKER_RADIUS, 16, 16]} />
             <meshStandardMaterial color={CUTTING_COLOR} />
           </mesh>
-          <mesh position={endpoints.end}>
+          <mesh position={liftMarker(endpoints.end)}>
             <sphereGeometry args={[MARKER_RADIUS, 16, 16]} />
             <meshStandardMaterial color={CUTTING_COLOR} />
           </mesh>
