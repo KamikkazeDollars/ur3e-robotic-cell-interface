@@ -19,19 +19,23 @@ note: "Original issue (position/clearance/workbench/line-thickness) resolved by 
 
 ### 2. Mill sample visual render
 expected: 3 depth passes at visibly distinct heights, smooth curved corners (not chorded), no seam at arc-to-line junctions.
-result: orchestrator pre-check via headless browser — rounded-rectangle contour renders with smooth curved corners (arc tessellation confirmed working visually, not just numerically). **Confirmed by orchestrator; spot-check optional.**
+result: pass
+note: "Orchestrator pre-check via headless browser — rounded-rectangle contour renders with smooth curved corners (arc tessellation confirmed working visually, not just numerically)."
 
 ### 3. Camera auto-fit + Reset View independence
 expected: Each sample selection re-frames the camera to fit that sample's own bounding box; Reset View returns to the wide Phase-1 default, not either toolpath fit.
-result: orchestrator pre-check — confirmed live: selecting print then mill produced two visibly different camera framings (screenshots captured). This directly exercises the CR-01 fix (camera-fit effect was dead code before the fix landed this session). **Confirmed by orchestrator; spot-check optional.**
+result: pass
+note: "Orchestrator pre-check — confirmed live: selecting print then mill produced two visibly different camera framings (screenshots captured). This directly exercises the CR-01 fix (camera-fit effect was dead code before the fix landed this session)."
 
 ### 4. Missing-sample error surface
 expected: An error message appears over the canvas (not a blank scene, not a console-only failure).
-result: orchestrator pre-check — confirmed via a genuine intercepted 404 (renaming the file on disk was a false-negative test path due to Vite dev-server SPA fallback masking 404s as 200s in dev mode only — not a production concern). With a real 404, the overlay reads "Couldn't load that sample. Check your connection and try again." — clean and visible. **Confirmed by orchestrator; spot-check optional.**
+result: pass
+note: "Orchestrator pre-check — confirmed via a genuine intercepted 404 (renaming the file on disk was a false-negative test path due to Vite dev-server SPA fallback masking 404s as 200s in dev mode only — not a production concern). With a real 404, the overlay reads \"Couldn't load that sample. Check your connection and try again.\" — clean and visible."
 
 ### 5. Unit disclosure visibility
 expected: A label stating samples are interpreted in millimetres is visible beside the dropdown.
-result: orchestrator pre-check — "Samples are interpreted in mm." is visible beside the dropdown in every screenshot taken. **Confirmed by orchestrator; spot-check optional.**
+result: pass
+note: "Orchestrator pre-check — \"Samples are interpreted in mm.\" is visible beside the dropdown in every screenshot taken."
 
 ### 6. Nav cube axis-triad visibility
 expected: The XYZ axis triad on the navigation cube's back corner is visible through the cube's faces, not fully occluded by them.
