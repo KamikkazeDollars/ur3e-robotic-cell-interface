@@ -5,6 +5,7 @@ import NavCube from './NavCube'
 import CameraResetListener from './CameraResetListener'
 import ToolpathCameraFit from './ToolpathCameraFit'
 import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET, FLOOR_Z_CENTER } from './RailRig'
+import Workbench from './Workbench'
 import Toolpath from './Toolpath'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
@@ -19,8 +20,10 @@ const SECONDARY_TONE = '#E4E7EB'
  *
  * Composition order (per PATTERNS.md's definitive ordering):
  *   lights (ambient + directional) -> floor plane -> rail/robot mount point
- *   -> Toolpath (plan 02-01, mounted after the rig, before OrbitControls)
- *   -> OrbitControls (makeDefault) -> NavCube -> CameraResetListener
+ *   -> Workbench (plan 02-04, scene furniture the toolpath visually rests
+ *      on — mounted between the rig and the toolpath) -> Toolpath (plan
+ *      02-01, mounted after the workbench, before OrbitControls) ->
+ *      OrbitControls (makeDefault) -> NavCube -> CameraResetListener
  *   -> ToolpathCameraFit (plan 02-03, mounted after CameraResetListener —
  *      D-05's toolpath fit is a distinct behaviour from the Reset View
  *      default framing the listener restores)
@@ -70,6 +73,11 @@ export default function CellScene() {
         <group name="rail-rig-mount" position={[0, 0, RIG_Z_OFFSET]}>
           <RailRig />
         </group>
+
+        {/* G-02-01 (plan 02-04): the workbench the toolpath visibly rests
+            on — scene furniture, positioned entirely from the toolpath
+            anchor constants, no wrapping transform. */}
+        <Workbench />
 
         {/* SIM-01/SIM-02 (plan 02-01): the classified, D-06-anchored
             toolpath for whichever bundled sample is selected. Points arrive
