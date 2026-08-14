@@ -5,9 +5,10 @@ import { useCellStore } from '../store/cellStore'
 // `<select>` — the installed shadcn CLI (4.x) diverges from the 3.8.4
 // preset flow STATE.md records this project as pinned to, so pulling in a
 // registry slider would reopen a resolved decision for a control this
-// simple. Styled with the existing UI-SPEC custom properties — Secondary
-// tone, never the Accent tone reserved for the nav cube and the Reset View
-// button (UI-SPEC "Color" visual-focal-point rule).
+// simple. Styled with the existing UI-SPEC custom properties — surface/
+// border roles for the control itself, muted-foreground for text, never the
+// Accent tone reserved for the nav cube and the Reset View button (UI-SPEC
+// "Color" visual-focal-point rule).
 const containerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -16,24 +17,24 @@ const containerStyle: React.CSSProperties = {
 
 const rangeStyle: React.CSSProperties = {
   width: '240px',
-  accentColor: 'var(--color-secondary)',
+  accentColor: 'var(--ui-surface-raised)',
 }
 
 const labelStyle: React.CSSProperties = {
   fontSize: 'var(--text-label)',
   lineHeight: 'var(--leading-label)',
   fontWeight: 'var(--weight-regular)',
-  color: 'var(--color-secondary)',
+  color: 'var(--ui-fg-muted)',
 }
 
-// Same style vocabulary as `SampleSelect.tsx`'s `noteStyle` — Secondary
-// tone, Label type size, no new one-off colour — reused verbatim here for
-// both the percentage readout and the disabled-state explanation.
+// Same style vocabulary as `SampleSelect.tsx`'s `noteStyle` — muted-
+// foreground tone, Label type size, no new one-off colour — reused verbatim
+// here for both the percentage readout and the disabled-state explanation.
 const noteStyle: React.CSSProperties = {
   fontSize: 'var(--text-label)',
   lineHeight: 'var(--leading-label)',
   fontWeight: 'var(--weight-regular)',
-  color: 'var(--color-secondary)',
+  color: 'var(--ui-fg-muted)',
 }
 
 /**

@@ -7,26 +7,27 @@ import { SCENE_STATUS_COPY } from './scene-status-copy'
 // shadcn CLI (4.x) diverges from the 3.8.4 preset flow STATE.md records
 // this project as pinned to, so pulling in a registry select would reopen a
 // resolved decision for a control this simple. Styled with the existing
-// UI-SPEC custom properties (Label type size, spacing scale, Secondary
-// tone) rather than a new one-off palette.
+// UI-SPEC custom properties (Label type size, spacing scale, surface/border
+// roles for the fill, muted-foreground role for text) rather than a new
+// one-off palette.
 const selectStyle: React.CSSProperties = {
   padding: 'var(--space-sm) var(--space-md)',
   borderRadius: '8px',
-  border: '1px solid var(--color-secondary)',
-  background: 'var(--color-secondary)',
+  border: '1px solid var(--ui-border)',
+  background: 'var(--ui-surface-raised)',
   fontSize: 'var(--text-label)',
   lineHeight: 'var(--leading-label)',
   fontWeight: 'var(--weight-regular)',
-  color: '#08060d',
+  color: 'var(--ui-fg)',
 }
 
-// Secondary-tone static text at the label type size — never the Accent tone
-// reserved for the nav cube and the Reset View button (UI-SPEC "Color").
+// Muted-foreground static text at the label type size — never the Accent
+// tone reserved for the nav cube and the Reset View button (UI-SPEC "Color").
 const noteStyle: React.CSSProperties = {
   fontSize: 'var(--text-label)',
   lineHeight: 'var(--leading-label)',
   fontWeight: 'var(--weight-regular)',
-  color: 'var(--color-secondary)',
+  color: 'var(--ui-fg-muted)',
 }
 
 /**
