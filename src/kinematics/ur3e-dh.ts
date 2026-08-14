@@ -29,15 +29,26 @@ export const UR3E_DH = [
 
 /**
  * Per-joint travel limits, in radians. Joints 1,2,4,5,6 are +/- 2*pi.
- * Joint 3 (elbow) is narrower, +/- pi — this is the URDF's own encoding
- * (Daniella1/urdf_files_dataset ur3e.urdf), and corrects the uniform
- * +/- 2*pi assumption in the placeholder architecture table (RESEARCH.md,
- * "Joint limits — a discrepancy worth flagging to the planner").
+ * Joint 3 (elbow) is narrower, +/- pi.
+ *
+ * Provenance (settled, plan 03-02): re-verified against Universal Robots'
+ * own maintained `Universal_Robots_ROS2_Description` ROS 2 package, whose
+ * UR3e `joint_limits.yaml` cites the UR3e user manual (e-Series, version
+ * 5.8) as its source. The elbow's narrower range is not an arbitrary
+ * choice — it exists because the arm's own geometry makes the
+ * shoulder-lift joint collide with the elbow joint beyond a half turn, a
+ * real mechanical constraint, not a modelling placeholder.
+ *
+ * WARNING (Pitfall B): this table's asymmetry — five joints at a full two
+ * turns and the elbow at one — looks like an inconsistency at a glance.
+ * "Tidying" it into a uniform range would silently reintroduce a real
+ * mechanical impossibility. These values are confirmed correct against the
+ * official source above and must NOT be normalised.
  */
 export const UR3E_JOINT_LIMITS = [
   { min: -2 * Math.PI, max: 2 * Math.PI }, // 1 shoulder_pan
   { min: -2 * Math.PI, max: 2 * Math.PI }, // 2 shoulder_lift
-  { min: -Math.PI, max: Math.PI }, // 3 elbow — narrower, URDF-verified (RESEARCH.md)
+  { min: -Math.PI, max: Math.PI }, // 3 elbow — narrower, URDF-verified (RESEARCH.md); see provenance note above
   { min: -2 * Math.PI, max: 2 * Math.PI }, // 4 wrist_1
   { min: -2 * Math.PI, max: 2 * Math.PI }, // 5 wrist_2
   { min: -2 * Math.PI, max: 2 * Math.PI }, // 6 wrist_3
