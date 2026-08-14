@@ -6,10 +6,13 @@
 // were ever wrong, this test — not a visual scrub in the running app — is
 // what catches it.
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { compileTrajectory, dhFrameToScene } from './compile'
 import { flattenToolpathPoints } from './arc-length'
 import { forwardKinematics, RAIL_CENTER_X, UR3E_PARKED_POSE } from '../kinematics'
-import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET } from '../gcode/toolpath-anchor'
+import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET, CARRIAGE_FRONT_FACE_Z } from '../gcode/toolpath-anchor'
+import { parseToolpath } from '../gcode/parseToolpath'
 import type { ClassifiedSegment, ParsedToolpath } from '../gcode/parseToolpath'
 
 /** A closed, 150mm-side square perimeter centred on the D-06 anchor's own
@@ -131,4 +134,44 @@ describe('compileTrajectory', () => {
     )
     expect(intermediateTravelSamples.length).toBeGreaterThan(0)
   })
+})
+
+// Checkpoint follow-up regression: the travel move (parked pose -> toolpath
+// first point) must never pass through the table. This reproduces
+// Workbench.tsx's own footprint derivation (never a second, independently
+// guessed literal — same discipline that file itself documents) and checks
+// every compiled sample's point against it, over the REAL bundled g-code
+// files (not just the synthetic square above), since the actual clip this
+// regression guards against was only reproducible against the real print
+// sample's specific geometry.
+const TABLE_NEAR_EDGE_STANDOFF = 0.02
+const TABLE_FAR_EDGE_PAD = 0.15
+const TABLE_WIDTH = 0.5
+const TABLE_X_MIN = TOOLPATH_ANCHOR_OFFSET.x - TABLE_WIDTH / 2
+const TABLE_X_MAX = TOOLPATH_ANCHOR_OFFSET.x + TABLE_WIDTH / 2
+const TABLE_NEAR_Z = CARRIAGE_FRONT_FACE_Z + TABLE_NEAR_EDGE_STANDOFF
+const TABLE_FAR_Z = TOOLPATH_ANCHOR_OFFSET.z + TABLE_FAR_EDGE_PAD
+const TABLE_TOP_Y = TOOLPATH_ANCHOR_OFFSET.y
+
+describe('compileTrajectory — travel move clears the table (checkpoint regression)', () => {
+  for (const sampleId of ['print', 'mill']) {
+    it(`never routes a ${sampleId}-sample travel-move point through the table's footprint below its top surface`, () => {
+      const gcodeText = readFileSync(join(process.cwd(), `public/gcode/${sampleId}-sample.gcode`), 'utf8')
+      const toolpath = parseToolpath(gcodeText)
+      const result = compileTrajectory(toolpath)
+
+      expect(result.status).toBe('ready')
+
+      const clippingSamples = result.samples.filter((sample) => {
+        const [x, y, z] = sample.point
+        const insideFootprint = x >= TABLE_X_MIN && x <= TABLE_X_MAX && z >= TABLE_NEAR_Z && z <= TABLE_FAR_Z
+        // 1mm tolerance: legitimate toolpath points sit exactly AT table
+        // top height, which must not itself be flagged.
+        const belowTableTop = y < TABLE_TOP_Y - 0.001
+        return insideFootprint && belowTableTop
+      })
+
+      expect(clippingSamples).toEqual([])
+    })
+  }
 })
