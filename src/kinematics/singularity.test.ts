@@ -18,6 +18,19 @@ describe('classifySingularity', () => {
     expect(flags.any).toBe(true)
   })
 
+  it('flags wrist when joint 5 sits at +/- pi (joints 4 and 6 axes collinear, mirror branch)', () => {
+    // Same joint tuple as the "joint 5 sits at zero" case above, with only
+    // theta5 swapped to the mirror-branch value — theta1-4 (and therefore
+    // the wrist-centre position / elbow angle) are unchanged, so shoulder
+    // and elbow are expected to stay false exactly as in that case.
+    const joints: JointAngles = [0.2, -0.5, 0.8, 0.3, Math.PI, 1.0]
+    const flags = classifySingularity(joints)
+    expect(flags.wrist).toBe(true)
+    expect(flags.elbow).toBe(false)
+    expect(flags.shoulder).toBe(false)
+    expect(flags.any).toBe(true)
+  })
+
   it('flags elbow when joint 3 sits at zero (arm fully extended)', () => {
     const joints: JointAngles = [0.1, -0.6, 0.001, 0.4, 0.6, 0.2]
     const flags = classifySingularity(joints)

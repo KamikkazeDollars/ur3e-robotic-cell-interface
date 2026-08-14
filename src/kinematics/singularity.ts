@@ -45,8 +45,14 @@ export function classifySingularity(joints: JointAngles): SingularityFlags {
   const theta5 = joints[4]
 
   // Wrist: joint 4 and joint 6 axes become collinear (rotation about them
-  // degenerate) when joint 5 is near zero.
-  const wrist = Math.abs(theta5) < SINGULARITY_ANGLE_EPSILON
+  // degenerate) when sin(theta5) is near zero — which happens at BOTH ends
+  // of the (-pi, pi] range (theta5 near 0 AND theta5 near +/- pi), mirroring
+  // the same two-branch check `elbow` performs three lines below for its
+  // own analogous condition. `solveUR6IK` special-cases exactly this
+  // condition via `Math.abs(s5) < ZERO_THRESH` (`inverse-kinematics.ts`).
+  const wrist =
+    Math.abs(theta5) < SINGULARITY_ANGLE_EPSILON ||
+    Math.abs(Math.abs(theta5) - Math.PI) < SINGULARITY_ANGLE_EPSILON
 
   // Elbow: the arm is fully extended (theta3 near 0) or fully folded
   // (theta3 near +/- pi).
