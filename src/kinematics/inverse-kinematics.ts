@@ -291,8 +291,10 @@ export function validBranches(candidates: JointAngles[]): JointAngles[] {
  * D-03's continuity rule: returns the candidate minimising
  * `jointSpaceDistance` to `previous`, or `null` for an empty candidate list.
  * A pure function — the decision of WHAT `previous` is (the prior compiled
- * sample, or `UR3E_READY_POSE` for the very first sample) belongs to the
- * caller (`src/trajectory/compile.ts`), not here.
+ * sample, or `UR3E_PARKED_POSE` for the very first sample — the
+ * render-boundary-corrected parked stance, not the retired
+ * `UR3E_READY_POSE`) belongs to the caller (`src/trajectory/compile.ts`),
+ * not here.
  */
 export function pickClosestBranch(candidates: JointAngles[], previous: JointAngles): JointAngles | null {
   if (candidates.length === 0) return null;
