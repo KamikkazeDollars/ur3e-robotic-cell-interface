@@ -30,3 +30,71 @@ export function railRemainingTravel(x: number): { negative: number; positive: nu
     positive: RAIL_TRAVEL.max - x,
   };
 }
+
+/**
+ * Number of evenly spaced candidate rail positions `resolveRailPosition`
+ * scans across `[RAIL_TRAVEL.min, RAIL_TRAVEL.max]`, inclusive of both
+ * endpoints.
+ */
+export const RAIL_RESOLUTION_CANDIDATES = 201;
+
+/**
+ * D-02's 7th-axis redundancy resolution: picks the single rail position
+ * (one per whole toolpath, per D-01) that minimises the worst-case reach
+ * distance from the mounted robot to any point in `points`.
+ *
+ * Implemented as a brute-force scan over `RAIL_RESOLUTION_CANDIDATES` evenly
+ * spaced candidates rather than the closed-form X-span-midpoint shortcut, so
+ * this function implements D-02's "minimise the worst-case reach distance"
+ * objective DIRECTLY — no optimality assumption about the shortcut is
+ * carried forward (03-RESEARCH.md Assumption A2, retired rather than
+ * inherited: `inverse-kinematics.test.ts`'s A2 cross-check asserts the two
+ * approaches agree to within a millimetre for a centred cloud).
+ *
+ * Takes `mount` as a parameter rather than importing the robot's world-mount
+ * constant from `src/gcode/toolpath-anchor.ts`: that module already imports
+ * from this one (for `RAIL_CENTER_X`), so importing it back here would
+ * close an import cycle.
+ *
+ * For both of this phase's bundled samples this resolves at or extremely
+ * near `RAIL_CENTER_X`, because Phase 2's D-06 anchor already X-centres
+ * every toolpath's bounding box there. PITFALLS.md Pitfall 5 flags exactly
+ * this outcome as easy to mistake for "the rail is being ignored" — it is
+ * not: the same toolpath translated a metre along X resolves to a visibly
+ * different rail position (asserted in rail.test.ts), proving the
+ * heuristic is live, not vestigial.
+ */
+export function resolveRailPosition(
+  points: readonly [number, number, number][],
+  mount: { x: number; y: number; z: number },
+): number {
+  if (points.length === 0) return RAIL_CENTER_X;
+
+  let bestCandidate = RAIL_CENTER_X;
+  let bestWorstCaseDistance = Infinity;
+
+  for (let i = 0; i < RAIL_RESOLUTION_CANDIDATES; i++) {
+    const t = i / (RAIL_RESOLUTION_CANDIDATES - 1);
+    const candidate = RAIL_TRAVEL.min + t * (RAIL_TRAVEL.max - RAIL_TRAVEL.min);
+    // The candidate's own mount position: `mount` with its x replaced by
+    // `mount.x + (candidate - RAIL_CENTER_X)`, so this stays correct even
+    // if the mount ever stops coinciding with the travel centre.
+    const candidateMountX = mount.x + (candidate - RAIL_CENTER_X);
+
+    let worstCaseDistance = 0;
+    for (const [px, py, pz] of points) {
+      const dx = px - candidateMountX;
+      const dy = py - mount.y;
+      const dz = pz - mount.z;
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (distance > worstCaseDistance) worstCaseDistance = distance;
+    }
+
+    if (worstCaseDistance < bestWorstCaseDistance) {
+      bestWorstCaseDistance = worstCaseDistance;
+      bestCandidate = candidate;
+    }
+  }
+
+  return clampRailPosition(bestCandidate);
+}

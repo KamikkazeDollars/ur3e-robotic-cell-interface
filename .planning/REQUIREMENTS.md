@@ -13,7 +13,7 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 - [x] **SIM-02**: User sees the parsed toolpath rendered in the 3D scene as a color-coded line — one style for rapid/joint moves, a different style for linear/cutting moves
 - [ ] **SIM-03**: User sees a distinct start and end marker on the trajectory for each operation
 - [ ] **SIM-04**: User can press play to animate the UR3e robot following the toolpath in real time, synced to the visible trajectory
-- [ ] **SIM-05**: User can pause and scrub the playback timeline to any point in the operation
+- [x] **SIM-05**: User can pause and scrub the playback timeline to any point in the operation
 - [ ] **SIM-06**: During milling operations, the toolpath line changes color to reflect tool-to-workpiece engagement depth while cutting
 - [ ] **SIM-07**: User sees an operations tree listing each operation in sequence order with its computed duration
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-02 | Phase 2 | Complete |
 | SIM-03 | Phase 6 | Pending |
 | SIM-04 | Phase 4 | Pending |
-| SIM-05 | Phase 3 | Pending |
+| SIM-05 | Phase 3 | Complete |
 | SIM-06 | Phase 6 | Pending |
 | SIM-07 | Phase 6 | Pending |
 | SCENE-01 | Phase 1 | Complete |

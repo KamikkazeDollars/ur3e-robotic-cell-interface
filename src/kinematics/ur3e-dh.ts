@@ -57,14 +57,50 @@ export const UR3E_JOINT_NAMES = [
 export const UR3E_HOME_POSE: JointAngles = [0, 0, 0, 0, 0, 0];
 
 /**
- * D-08: the *displayed* static pose — a slightly bent "ready" pose, never
- * asserted against in the FK reference-pose test. Shoulder lifted ~45deg,
- * elbow bent ~60deg, wrists set so the flange faces roughly forward.
+ * D-08: Phase 1's originally-displayed static pose. Retained UNCHANGED —
+ * `src/gcode/toolpath-anchor.ts` derives `WORKBENCH_TOP_Y` (the workbench's
+ * own world-space height) from this exact pose's FK'd TCP height, so
+ * changing its values would silently shift the whole rendered table.
+ * Never asserted against in the FK reference-pose test.
+ *
+ * Phase 3 (03-01) stopped using this as the robot's actually-displayed
+ * pose — see `UR3E_PARKED_POSE` below — because this pose's own TCP sits
+ * up over the workbench (only discovered once Phase 3 introduced a
+ * position-accurate visual cross-check; Phase 1/2 never rendered this pose
+ * against a table, since the table didn't exist yet). It survives purely
+ * as the `WORKBENCH_TOP_Y` derivation input.
  */
 export const UR3E_READY_POSE: JointAngles = [
   0,
   -Math.PI / 4,
   -Math.PI / 3,
+  -Math.PI / 2,
+  -Math.PI / 2,
+  0,
+];
+
+/**
+ * D-08 (revised, Phase 3 03-01): the robot's actually-displayed idle/parked
+ * stance — visibly OFF the workbench, not overlapping the work area, a
+ * genuine "stowed" configuration rather than a pose that happens to rest
+ * over the table. Chosen empirically (rendered and visually inspected
+ * against the real workbench geometry this session) rather than derived:
+ * shoulder_pan swung to the side (away from the table's forward-Z
+ * direction), a folded, compact shoulder/elbow bend that keeps the whole
+ * arm low and close to its own mount rather than reaching outward.
+ *
+ * This is BOTH `RobotModel.tsx`'s initial static pose (replacing
+ * `UR3E_READY_POSE` there) AND `src/trajectory/compile.ts`'s continuity
+ * seed / literal first sample for the prepended home-to-toolpath travel
+ * move (D-0x) — the same stance the user sees before selecting a sample is
+ * exactly where the compiled trajectory's scrub fraction 0 starts, so
+ * there is no visual snap between "nothing selected" and "sample just
+ * selected, scrub at 0".
+ */
+export const UR3E_PARKED_POSE: JointAngles = [
+  Math.PI,
+  -0.35,
+  0.7,
   -Math.PI / 2,
   -Math.PI / 2,
   0,
