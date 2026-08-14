@@ -307,6 +307,14 @@ export function compileTrajectory(toolpath: ParsedToolpath): CompiledTrajectory 
         // The literal authored parked pose — not IK-solved. A genuine,
         // independently-authored waypoint, not one derived by blending
         // (SIM-05); its FK still round-trips `point` exactly below.
+        //
+        // This is the ONLY sample not solved against `buildToolDownTarget`,
+        // which is why `UR3E_PARKED_POSE` carries a hard constraint (see its
+        // doc comment) that its flange must already hold that same tool-down
+        // orientation. Sample 1 is a couple of millimetres away and IS
+        // IK-solved, so any orientation disagreement here has nowhere to go
+        // but into a wrist snap on the very first scrub step — which is
+        // precisely what 03-UAT.md G-03-1 reported.
         chosen = UR3E_PARKED_POSE
       } else {
         chosen = solvePointToJoints(point, railOffsetFromCenter, previousJoints)

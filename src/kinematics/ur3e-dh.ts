@@ -91,6 +91,21 @@ export const UR3E_READY_POSE: JointAngles = [
 ];
 
 /**
+ * The stowed shoulder/elbow bend `UR3E_PARKED_POSE` below is built from —
+ * kept as named constants rather than inline literals because `wrist_1` is
+ * DERIVED from them (see below), so the three values can never drift apart.
+ *
+ * Provenance: these are the shoulder_lift/elbow angles of the tool-down
+ * inverse-kinematics solution at the parked stance's own TCP point — i.e. the
+ * arm holds exactly the position it always did, re-articulated so the flange
+ * points down. They are a solver output recorded as a constant, not a
+ * hand-tuned pair (03-UAT.md G-03-1, debug session
+ * `table-clipping-singularities`).
+ */
+const PARKED_SHOULDER_LIFT = -0.4645740511122175;
+const PARKED_ELBOW = 1.0760678431724195;
+
+/**
  * D-08 (revised, Phase 3 03-01): the robot's actually-displayed idle/parked
  * stance — visibly OFF the workbench, not overlapping the work area, a
  * genuine "stowed" configuration rather than a pose that happens to rest
@@ -107,12 +122,37 @@ export const UR3E_READY_POSE: JointAngles = [
  * exactly where the compiled trajectory's scrub fraction 0 starts, so
  * there is no visual snap between "nothing selected" and "sample just
  * selected, scrub at 0".
+ *
+ * HARD CONSTRAINT — this pose's flange must hold the SAME tool-down
+ * orientation `buildToolDownTarget` (inverse-kinematics.ts) builds every
+ * solved sample against. `compileTrajectory` emits this tuple VERBATIM as
+ * scrub-fraction 0 while sample 1, a couple of millimetres later, is
+ * IK-solved; if the two orientations disagree, that couple of millimetres has
+ * to absorb the whole orientation difference as a wrist snap. The original
+ * stance held the flange rotated 90 degrees about the tool axis
+ * (wrist_3 = 0, wrist_1 = -pi/2), which is exactly what UAT saw as the arm
+ * whipping the instant the scrub left 0: wrist_3 stepped 1.5732 rad and
+ * wrist_1 0.616 rad over 1.2mm of travel. `inverse-kinematics.test.ts` now
+ * asserts this constraint directly, so it cannot silently regress.
+ *
+ * The correction changed only how the arm HOLDS the point, never which point:
+ * this is the tool-down IK branch at the previous stance's own TCP, so
+ * `compileTrajectory`'s `homeTcpPoint` is bit-for-bit unchanged and every
+ * empirically-verified claim in its doc comment about lift reachability and
+ * where the travel line crosses table height still stands unmodified.
+ *
+ * `wrist_1` is DERIVED, not authored: with shoulder_pan at pi and both
+ * wrist_2/wrist_3 at -pi/2, the flange points straight down exactly when
+ * shoulder_lift + elbow + wrist_1 = -pi/2. Writing that closure as arithmetic
+ * rather than a fourth magic number means re-posing the stowed bend (the two
+ * constants above) keeps the pose tool-down automatically instead of silently
+ * reintroducing the snap.
  */
 export const UR3E_PARKED_POSE: JointAngles = [
   Math.PI,
-  -0.35,
-  0.7,
+  PARKED_SHOULDER_LIFT,
+  PARKED_ELBOW,
+  -Math.PI / 2 - PARKED_SHOULDER_LIFT - PARKED_ELBOW,
   -Math.PI / 2,
   -Math.PI / 2,
-  0,
 ];

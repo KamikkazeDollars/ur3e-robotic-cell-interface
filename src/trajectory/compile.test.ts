@@ -10,7 +10,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { compileTrajectory, dhFrameToScene } from './compile'
 import { flattenToolpathPoints } from './arc-length'
-import { forwardKinematics, RAIL_CENTER_X, UR3E_PARKED_POSE } from '../kinematics'
+import { forwardKinematics, RAIL_CENTER_X, UR3E_PARKED_POSE, type JointAngles } from '../kinematics'
 import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET, CARRIAGE_FRONT_FACE_Z } from '../gcode/toolpath-anchor'
 import { parseToolpath } from '../gcode/parseToolpath'
 import type { ClassifiedSegment, ParsedToolpath } from '../gcode/parseToolpath'
@@ -187,6 +187,147 @@ describe('compileTrajectory — travel move clears the table (checkpoint regress
       })
 
       expect(clippingSamples).toEqual([])
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// UAT regression (03-UAT.md G-03-1 / G-03-3, debug session
+// `table-clipping-singularities`). The two gates below exist because the
+// TCP-only check above passed while the arm was visibly whipping and driving
+// its ELBOW to within 8mm of the tabletop: `sample.point` is the target the
+// TCP is solved to, and that target was never the thing going wrong.
+// ---------------------------------------------------------------------------
+
+/**
+ * The arm's kinematic skeleton in scene space: the rail-offset base, then the
+ * six FK frame origins, joined in order. Derived from `forwardKinematics` and
+ * `dhFrameToScene` — the modules that already own that math — so this can
+ * never disagree with the pose the renderer is handed.
+ *
+ * This is a centre-line approximation of the arm, not its mesh hull: the real
+ * UR3e links have roughly 0.04-0.06m of radius around these segments, which
+ * is exactly why a centre-line clearance in the low centimetres reads as a
+ * visible pass-through on screen.
+ */
+function armSkeletonScenePoints(joints: JointAngles, railOffsetFromCenter: number): [number, number, number][] {
+  const fk = forwardKinematics(joints, railOffsetFromCenter)
+  const points: [number, number, number][] = [
+    dhFrameToScene({ x: railOffsetFromCenter, y: 0, z: 0 }, ROBOT_MOUNT_WORLD),
+  ]
+  for (const frame of fk.frames) {
+    points.push(dhFrameToScene({ x: frame[0][3], y: frame[1][3], z: frame[2][3] }, ROBOT_MOUNT_WORLD))
+  }
+  return points
+}
+
+/** Distance from a scene point to the tabletop's axis-aligned box (0 inside). */
+function distanceToTabletop([x, y, z]: [number, number, number]): number {
+  const TABLE_BOTTOM_Y = TABLE_TOP_Y - 0.04 // Workbench.tsx's TABLETOP_THICKNESS
+  return Math.hypot(
+    Math.max(TABLE_X_MIN - x, 0, x - TABLE_X_MAX),
+    Math.max(TABLE_BOTTOM_Y - y, 0, y - TABLE_TOP_Y),
+    Math.max(TABLE_NEAR_Z - z, 0, z - TABLE_FAR_Z),
+  )
+}
+
+/** Minimum tabletop distance over the whole densely-sampled skeleton. */
+function minSkeletonDistanceToTabletop(joints: JointAngles, railOffsetFromCenter: number): number {
+  const points = armSkeletonScenePoints(joints, railOffsetFromCenter)
+  let minimum = Infinity
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]
+    const b = points[i]
+    const STEPS = 40
+    for (let s = 0; s <= STEPS; s++) {
+      const t = s / STEPS
+      minimum = Math.min(
+        minimum,
+        distanceToTabletop([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])]),
+      )
+    }
+  }
+  return minimum
+}
+
+describe('compileTrajectory — the whole ARM (not just the TCP) clears the table while traversing', () => {
+  // The travel move's horizontal traverse runs at a single clearance plane —
+  // `TRAVEL_CLEARANCE_ABOVE_TABLE_M` above everything below it — which is
+  // strictly higher than any toolpath point, so "samples sitting at the
+  // highest Y any sample targets" isolates exactly the traverse. During that
+  // traverse the tool is going nowhere near the work, so EVERY link must stay
+  // well clear of the tabletop.
+  //
+  // 0.05m is deliberately below the 0.08m the clearance constant is designed
+  // to deliver (leaving headroom for the arm's own articulation) but an order
+  // of magnitude above the 0.008m the wrap-blind branch metric produced.
+  const MIN_TRAVERSE_CLEARANCE_M = 0.05
+
+  for (const sampleId of ['print', 'mill']) {
+    it(`keeps every ${sampleId}-sample arm link clear of the tabletop through the clearance-plane traverse`, () => {
+      const gcodeText = readFileSync(join(process.cwd(), `public/gcode/${sampleId}-sample.gcode`), 'utf8')
+      const result = compileTrajectory(parseToolpath(gcodeText))
+      expect(result.status).toBe('ready')
+
+      const railOffsetFromCenter = result.railPos - RAIL_CENTER_X
+      const clearancePlaneY = Math.max(...result.samples.map((sample) => sample.point[1]))
+      const traverseSamples = result.samples.filter(
+        (sample) => Math.abs(sample.point[1] - clearancePlaneY) < 1e-9,
+      )
+      // Guards the guard: if the traverse ever stopped being identifiable
+      // this way, the assertion below would vacuously pass.
+      expect(traverseSamples.length).toBeGreaterThan(10)
+
+      let worst = { clearance: Infinity, scrubFraction: -1 }
+      for (const sample of traverseSamples) {
+        const clearance = minSkeletonDistanceToTabletop(sample.joints, railOffsetFromCenter)
+        if (clearance < worst.clearance) worst = { clearance, scrubFraction: sample.scrubFraction }
+      }
+
+      expect(
+        worst.clearance,
+        `closest arm link came within ${worst.clearance.toFixed(4)}m of the tabletop at scrubFraction ${worst.scrubFraction.toFixed(4)}`,
+      ).toBeGreaterThan(MIN_TRAVERSE_CLEARANCE_M)
+    })
+  }
+})
+
+describe('compileTrajectory — adjacent samples never snap (D-03 continuity, end to end)', () => {
+  // `inverse-kinematics.test.ts` already asserts continuity along a synthetic
+  // straight line, but that line never crosses a joint's (-pi, pi] wrap
+  // boundary. The REAL compiled travel move does — which is where a 4.28 rad
+  // single-step whole-arm reconfiguration was hiding. This gate therefore runs
+  // over the real bundled g-code, across BOTH phases, including the
+  // parked-pose-to-first-solve transition at index 0->1 (which was itself a
+  // 1.57 rad wrist snap, from an authored parked pose whose flange orientation
+  // did not match `buildToolDownTarget`'s).
+  //
+  // At `TRAJECTORY_SAMPLE_SPACING_M` (2mm) between samples, a legitimate step
+  // is a small fraction of a radian; 0.25 rad (~14 degrees) is far above any
+  // real step and far below the 1.57/2.52/4.28 rad snaps this guards against.
+  const MAX_ADJACENT_JOINT_STEP_RAD = 0.25
+
+  for (const sampleId of ['print', 'mill']) {
+    it(`never steps a ${sampleId}-sample joint more than ${MAX_ADJACENT_JOINT_STEP_RAD} rad between adjacent samples`, () => {
+      const gcodeText = readFileSync(join(process.cwd(), `public/gcode/${sampleId}-sample.gcode`), 'utf8')
+      const result = compileTrajectory(parseToolpath(gcodeText))
+      expect(result.status).toBe('ready')
+
+      let worst = { step: 0, index: -1, joint: -1 }
+      for (let i = 1; i < result.samples.length; i++) {
+        const previous = result.samples[i - 1].joints
+        const current = result.samples[i].joints
+        for (let j = 0; j < 6; j++) {
+          const step = Math.abs(current[j] - previous[j])
+          if (step > worst.step) worst = { step, index: i, joint: j }
+        }
+      }
+
+      expect(
+        worst.step,
+        `joint ${worst.joint} stepped ${worst.step.toFixed(4)} rad between samples ${worst.index - 1} and ${worst.index} ` +
+          `(scrubFraction ${result.samples[worst.index]?.scrubFraction.toFixed(4)})`,
+      ).toBeLessThan(MAX_ADJACENT_JOINT_STEP_RAD)
     })
   }
 })

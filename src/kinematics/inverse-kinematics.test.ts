@@ -12,8 +12,8 @@ import {
   pickClosestBranch,
   jointSpaceDistance,
 } from './inverse-kinematics'
-import { forwardKinematics } from './forward-kinematics'
-import { UR3E_HOME_POSE, UR3E_READY_POSE, type JointAngles } from './ur3e-dh'
+import { forwardKinematics, isWithinJointLimits } from './forward-kinematics'
+import { UR3E_HOME_POSE, UR3E_READY_POSE, UR3E_PARKED_POSE, type JointAngles } from './ur3e-dh'
 import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET } from '../gcode/toolpath-anchor'
 import { sceneToDhFrame } from '../trajectory/compile'
 
@@ -151,5 +151,88 @@ describe('validBranches', () => {
 describe('pickClosestBranch', () => {
   it('returns null for an empty candidate list', () => {
     expect(pickClosestBranch([], UR3E_HOME_POSE)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// UAT regression (debug session `table-clipping-singularities`). `solveUR6IK`
+// normalises every branch into (-pi, pi]. A joint that crosses that boundary
+// between two adjacent 2mm-apart samples therefore comes back ~2pi away in
+// RAW value while being physically ~0 away — and raw-subtraction scoring then
+// prefers a completely different arm configuration. Measured on the real print
+// sample: the physically-identical branch scored 6.2761 raw (0.0103 shortest-
+// path) and lost to a full reconfiguration scoring 5.1713, which whipped the
+// arm and dropped its elbow to 8mm from the tabletop.
+// ---------------------------------------------------------------------------
+describe('pickClosestBranch — 2*pi wrap must not be mistaken for real motion', () => {
+  it('prefers the physically-adjacent branch over a nearer-in-raw-value reconfiguration', () => {
+    // wrist_3 sits just under +pi; the continuation just over +pi comes back
+    // normalised to just over -pi.
+    const previous: JointAngles = [0, -1, 1, -1, -1, 3.14]
+    const wrapped: JointAngles = [0, -1, 1, -1, -1, -3.14] // 0.0032 rad away, physically
+    const reconfiguration: JointAngles = [0.5, -0.5, 0.5, -0.5, -0.5, 0.5]
+
+    // Establishes the trap this test exists for: raw subtraction really does
+    // rank the reconfiguration ahead of the physically-adjacent branch.
+    expect(jointSpaceDistance(wrapped, previous)).toBeGreaterThan(
+      jointSpaceDistance(reconfiguration, previous),
+    )
+
+    const chosen = pickClosestBranch([reconfiguration, wrapped], previous) as JointAngles
+    expect(chosen).not.toBeNull()
+
+    // Every joint must land within a hair of `previous` — i.e. the wrapped
+    // branch won, and was returned in the revolution that keeps the stored
+    // value continuous (so a joint-velocity readout can't see a 2*pi spike).
+    chosen.forEach((angle, i) => {
+      expect(Math.abs(angle - previous[i])).toBeLessThan(0.01)
+    })
+  })
+
+  it('returns a pose physically identical to the candidate it selected', () => {
+    const previous: JointAngles = [0, -1, 1, -1, -1, 3.14]
+    const wrapped: JointAngles = [0, -1, 1, -1, -1, -3.14]
+
+    const chosen = pickClosestBranch([wrapped], previous) as JointAngles
+    const chosenTcp = forwardKinematics(chosen).tcpPosition
+    const candidateTcp = forwardKinematics(wrapped).tcpPosition
+
+    // Re-expressing an angle by a whole number of turns cannot move the arm.
+    expect(chosenTcp.x).toBeCloseTo(candidateTcp.x, 12)
+    expect(chosenTcp.y).toBeCloseTo(candidateTcp.y, 12)
+    expect(chosenTcp.z).toBeCloseTo(candidateTcp.z, 12)
+    expect(isWithinJointLimits(chosen)).toBe(true)
+  })
+
+  it('never unwraps a joint out of its own travel limit', () => {
+    // The elbow (index 2) is limited to +/- pi, unlike the other five joints'
+    // +/- 2pi — so the continuous continuation past +pi is genuinely
+    // unreachable and must NOT be manufactured. Boundary neighbour of the
+    // case above, where unwrapping IS legal.
+    const previous: JointAngles = [0, 0, 3.1, 0, 0, 0]
+    const wrapped: JointAngles = [0, 0, -3.1, 0, 0, 0] // unwrapping -> 3.183 > pi
+
+    const chosen = pickClosestBranch([wrapped], previous) as JointAngles
+    expect(isWithinJointLimits(chosen)).toBe(true)
+    expect(chosen[2]).toBeCloseTo(-3.1, 12)
+  })
+})
+
+describe('UR3E_PARKED_POSE — must hold the same tool-down orientation every solved sample uses', () => {
+  it('has a flange orientation matching buildToolDownTarget', () => {
+    // `compileTrajectory` emits this authored pose VERBATIM as scrub-fraction-0
+    // (it is also `RobotModel.tsx`'s static stance), while every subsequent
+    // sample is solved against `buildToolDownTarget`'s fixed orientation. If
+    // the two disagree, the very first scrub step has to rotate the wrist to
+    // make up the difference — measured at 1.5732 rad over 1.2mm of travel
+    // before this was fixed.
+    const { matrix } = forwardKinematics(UR3E_PARKED_POSE)
+    const toolDown = buildToolDownTarget(forwardKinematics(UR3E_PARKED_POSE).tcpPosition)
+
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        expect(matrix[row][col]).toBeCloseTo(toolDown[row][col], 9)
+      }
+    }
   })
 })

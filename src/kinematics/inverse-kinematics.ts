@@ -32,7 +32,7 @@
 // so importing back from the barrel would create a same-directory
 // self-referential cycle. forward-kinematics.ts already establishes this
 // "import siblings directly" convention.
-import { UR3E_DH, type JointAngles } from './ur3e-dh';
+import { UR3E_DH, UR3E_JOINT_LIMITS, type JointAngles } from './ur3e-dh';
 import { isWithinJointLimits, type Matrix4 } from './forward-kinematics';
 
 /** Below this magnitude, a value is treated as exactly zero for the
@@ -262,7 +262,17 @@ export function solveUR6IK(target: Matrix4): JointAngles[] {
   return solutions;
 }
 
-/** Euclidean norm of the component-wise joint-angle difference. */
+/**
+ * Euclidean norm of the component-wise joint-angle difference.
+ *
+ * Deliberately RAW (no 2*pi wrap handling): this measures the distance between
+ * two joint tuples as literally written, which is the correct primitive for
+ * asking "how far do these joint VALUES move" — the question a joint-velocity
+ * readout asks. It is emphatically NOT safe to feed it two tuples drawn from
+ * different revolutions, which is why `pickClosestBranch` below re-expresses
+ * every candidate into `previous`'s own revolution BEFORE scoring it here.
+ * See `unwrapTowards`'s doc comment for what went wrong when it did not.
+ */
 export function jointSpaceDistance(a: JointAngles, b: JointAngles): number {
   let sumSq = 0;
   for (let i = 0; i < 6; i++) {
@@ -270,6 +280,47 @@ export function jointSpaceDistance(a: JointAngles, b: JointAngles): number {
     sumSq += diff * diff;
   }
   return Math.sqrt(sumSq);
+}
+
+/**
+ * Re-expresses `candidate` in the 2*pi-equivalent revolution closest to
+ * `previous`, joint by joint — adding or subtracting whole turns only, so the
+ * returned tuple is the SAME physical pose (forward kinematics is invariant to
+ * a whole turn on any revolute joint) written in continuous values.
+ *
+ * Why this exists (03-UAT.md G-03-1/G-03-3, debug session
+ * `table-clipping-singularities`): `solveUR6IK` normalises every branch it
+ * emits into (-pi, pi]. When a joint's true, continuous continuation crosses
+ * that boundary between two adjacent samples, the solver reports it on the far
+ * side — 2*pi away in raw value, zero away in physical reality. Scoring that
+ * raw difference made `pickClosestBranch` reject the correct branch and select
+ * a completely different arm configuration instead. Measured on the real print
+ * sample, at 2mm sample spacing: the physically-identical branch scored 6.2761
+ * while a full shoulder/elbow/wrist reconfiguration scored 5.1713 and won —
+ * snapping the arm 4.28 rad in one step and leaving it in a stance whose elbow
+ * rode 0.008m from the tabletop instead of 0.080m. Both of that phase's UAT
+ * failures (visible whipping AND the arm passing through the table) were that
+ * one comparison.
+ *
+ * A joint is only unwrapped when the unwrapped value still lies inside its own
+ * declared travel limit. That guard is load-bearing, not defensive padding:
+ * the elbow is limited to +/- pi where every other joint has +/- 2*pi
+ * (`UR3E_JOINT_LIMITS`), so its continuous continuation past pi is genuinely
+ * mechanically unreachable. Manufacturing it would trade a cosmetic snap for a
+ * pose the robot cannot hold. When the guard blocks an unwrap, the solver's own
+ * normalised value is kept and the resulting large distance correctly reports
+ * that a real reconfiguration IS required here.
+ */
+function unwrapTowards(candidate: JointAngles, previous: JointAngles): JointAngles {
+  const unwrapped = [...candidate] as JointAngles;
+  for (let i = 0; i < 6; i++) {
+    const turns = Math.round((previous[i] - candidate[i]) / (2 * Math.PI));
+    if (turns === 0) continue;
+    const shifted = candidate[i] + turns * 2 * Math.PI;
+    const { min, max } = UR3E_JOINT_LIMITS[i];
+    if (shifted >= min && shifted <= max) unwrapped[i] = shifted;
+  }
+  return unwrapped;
 }
 
 /**
@@ -288,22 +339,31 @@ export function validBranches(candidates: JointAngles[]): JointAngles[] {
 }
 
 /**
- * D-03's continuity rule: returns the candidate minimising
- * `jointSpaceDistance` to `previous`, or `null` for an empty candidate list.
- * A pure function — the decision of WHAT `previous` is (the prior compiled
- * sample, or `UR3E_PARKED_POSE` for the very first sample — the
- * render-boundary-corrected parked stance, not the retired
- * `UR3E_READY_POSE`) belongs to the caller (`src/trajectory/compile.ts`),
- * not here.
+ * D-03's continuity rule: returns the candidate that moves the arm least from
+ * `previous`, or `null` for an empty candidate list. A pure function — the
+ * decision of WHAT `previous` is (the prior compiled sample, or
+ * `UR3E_PARKED_POSE` for the very first sample — the render-boundary-corrected
+ * parked stance, not the retired `UR3E_READY_POSE`) belongs to the caller
+ * (`src/trajectory/compile.ts`), not here.
+ *
+ * Each candidate is passed through `unwrapTowards` BEFORE it is scored, and the
+ * unwrapped form is what gets returned. That ordering is the whole point and
+ * must not be relaxed to "score raw, return raw" (see `unwrapTowards` for the
+ * UAT failure that caused): scoring the solver's raw (-pi, pi]-normalised
+ * output makes a change of REPRESENTATION look like 2*pi of physical motion,
+ * and returning the unwrapped form is what keeps the emitted joint values
+ * continuous in value rather than merely equivalent in pose — so a downstream
+ * joint-velocity readout cannot see a 2*pi spike where the arm never moved.
  */
 export function pickClosestBranch(candidates: JointAngles[], previous: JointAngles): JointAngles | null {
   if (candidates.length === 0) return null;
-  let best = candidates[0];
-  let bestDistance = jointSpaceDistance(best, previous);
-  for (let i = 1; i < candidates.length; i++) {
-    const distance = jointSpaceDistance(candidates[i], previous);
+  let best: JointAngles | null = null;
+  let bestDistance = Infinity;
+  for (const candidate of candidates) {
+    const continuous = unwrapTowards(candidate, previous);
+    const distance = jointSpaceDistance(continuous, previous);
     if (distance < bestDistance) {
-      best = candidates[i];
+      best = continuous;
       bestDistance = distance;
     }
   }
