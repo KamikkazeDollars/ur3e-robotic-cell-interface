@@ -92,7 +92,15 @@ export default function SampleSelect() {
       {isFrozen && (
         <span style={noteStyle} role="status">
           {SCENE_STATUS_COPY.trajectoryFrozen} Reached {reachedCount} of {requestedCount} intended
-          sample{requestedCount === 1 ? '' : 's'}.
+          sample{requestedCount === 1 ? '' : 's'}
+          {/* WR-04 review follow-up: reachedCount <= 1 means only the
+              literal parked-pose sample landed before freezing — the very
+              first IK-solved travel waypoint (the lift point) was already
+              unreachable, so the robot never leaves its parked stance for
+              the whole scrub range. Calling this out explicitly avoids it
+              reading as "scrubbing does nothing" rather than "this sample's
+              approach move is unreachable". */}
+          {reachedCount <= 1 ? ', including the approach move' : ''}.
         </span>
       )}
     </div>
