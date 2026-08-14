@@ -14,7 +14,7 @@ This roadmap builds a browser-based 3D digital twin of a UR3e on a 7th-axis rail
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Static Rig + Kinematics Foundation** - UR3e + rail render at a correct static pose in an interactive, nav-cube-driven 3D scene; project is live on GitHub + a public URL from day one (completed 2026-08-13)
-- [ ] **Phase 2: G-code Import + Static Toolpath** - Upload a g-code file and see it parsed into a classified, color-coded static toolpath in the 3D scene
+- [x] **Phase 2: G-code Import + Static Toolpath** - Upload a g-code file and see it parsed into a classified, color-coded static toolpath in the 3D scene (completed 2026-08-14)
 - [ ] **Phase 3: Inverse Kinematics + Trajectory Compile + Scrub** - Scrub the timeline and watch the UR3e (incl. rail) accurately re-pose along the toolpath via closed-form IK
 - [ ] **Phase 4: Playback Engine** - Press play and watch the UR3e animate the full toolpath in real time, synced to the visible trajectory
 - [ ] **Phase 5: Telemetry / Dashboard** - Live joint angles, TCP position/speed, and rail position/travel, all computed from the same playback data the scene reads
@@ -179,7 +179,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
-| 2. G-code Import + Static Toolpath | 3/3 | In Progress|  |
+| 2. G-code Import + Static Toolpath | 5/5 | Complete    | 2026-08-14 |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 0/? | Not started | - |
 | 4. Playback Engine | 0/? | Not started | - |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |

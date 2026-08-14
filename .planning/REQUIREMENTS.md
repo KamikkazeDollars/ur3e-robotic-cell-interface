@@ -9,8 +9,8 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 
 ### Simulation (Core)
 
-- [ ] **SIM-01**: User can upload a g-code file and have the system parse it into a classified toolpath (move type, coordinates, feed rate per segment)
-- [ ] **SIM-02**: User sees the parsed toolpath rendered in the 3D scene as a color-coded line — one style for rapid/joint moves, a different style for linear/cutting moves
+- [x] **SIM-01**: User can upload a g-code file and have the system parse it into a classified toolpath (move type, coordinates, feed rate per segment)
+- [x] **SIM-02**: User sees the parsed toolpath rendered in the 3D scene as a color-coded line — one style for rapid/joint moves, a different style for linear/cutting moves
 - [ ] **SIM-03**: User sees a distinct start and end marker on the trajectory for each operation
 - [ ] **SIM-04**: User can press play to animate the UR3e robot following the toolpath in real time, synced to the visible trajectory
 - [ ] **SIM-05**: User can pause and scrub the playback timeline to any point in the operation
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIM-01 | Phase 2 | Pending |
-| SIM-02 | Phase 2 | Pending |
+| SIM-01 | Phase 2 | Complete |
+| SIM-02 | Phase 2 | Complete |
 | SIM-03 | Phase 6 | Pending |
 | SIM-04 | Phase 4 | Pending |
 | SIM-05 | Phase 3 | Pending |
