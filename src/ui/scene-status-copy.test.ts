@@ -42,6 +42,14 @@ describe('SCENE_STATUS_COPY', () => {
     ]
     expect(new Set(values).size).toBe(values.length)
   })
+
+  it('trajectoryFrozen copy exists, is non-empty, and carries no placeholder/interpolation syntax', () => {
+    expect(SCENE_STATUS_COPY.trajectoryFrozen.length).toBeGreaterThan(0)
+    // The assertion that matters: this string must stay a fixed constant
+    // that can never accidentally become a template for exception text —
+    // no `${...}`, no `%s`/`{0}`-style placeholders, no template braces.
+    expect(SCENE_STATUS_COPY.trajectoryFrozen).not.toMatch(/\$\{|%s|\{\d+\}|\{[a-zA-Z_]+\}/)
+  })
 })
 
 describe('toolpathStatusCopy', () => {

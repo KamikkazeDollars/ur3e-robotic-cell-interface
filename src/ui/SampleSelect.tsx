@@ -1,5 +1,6 @@
 import { useCellStore } from '../store/cellStore'
 import { GCODE_SAMPLES } from '../gcode/samples'
+import { SCENE_STATUS_COPY } from './scene-status-copy'
 
 // D-02: a plain native `<select>` rather than a registry component —
 // `src/components/ui/` only has `button.tsx` today, and the installed
@@ -41,14 +42,26 @@ const noteStyle: React.CSSProperties = {
  * surfacing the assumed unit rather than hard-coding it invisibly; a
  * silently truncated path presented as the whole job is this phase's own
  * transparency prohibition (SIM-01).
+ *
+ * Also renders a second `role="status"` note (D-06/SIM-05) when the
+ * compiled trajectory froze at an unreachable point: the fixed
+ * `trajectoryFrozen` copy plus how many samples were reached out of how
+ * many were intended, read from the trajectory's own `samples.length` and
+ * `requestedSampleCount` — never a second hardcoded number. This is
+ * deliberately non-blocking chrome, not the centred `SceneStatusOverlay`
+ * panel reserved for blocking states.
  */
 export default function SampleSelect() {
   const selectedSampleId = useCellStore((state) => state.selectedSampleId)
   const selectSample = useCellStore((state) => state.selectSample)
   const toolpath = useCellStore((state) => state.toolpath)
+  const trajectory = useCellStore((state) => state.trajectory)
 
   const unitLabel = toolpath?.unit ?? 'mm'
   const skippedMotionCount = toolpath?.skippedMotionCount ?? 0
+  const isFrozen = trajectory?.status === 'frozen-at-unreachable'
+  const reachedCount = trajectory?.samples.length ?? 0
+  const requestedCount = trajectory?.requestedSampleCount ?? 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -74,6 +87,12 @@ export default function SampleSelect() {
         <span style={noteStyle} role="status">
           {skippedMotionCount} command{skippedMotionCount === 1 ? '' : 's'} in this file could not be
           rendered and {skippedMotionCount === 1 ? 'was' : 'were'} skipped.
+        </span>
+      )}
+      {isFrozen && (
+        <span style={noteStyle} role="status">
+          {SCENE_STATUS_COPY.trajectoryFrozen} Reached {reachedCount} of {requestedCount} intended
+          sample{requestedCount === 1 ? '' : 's'}.
         </span>
       )}
     </div>
