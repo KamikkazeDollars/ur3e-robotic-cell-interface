@@ -1,25 +1,27 @@
 ---
 status: testing
 phase: 02-g-code-import-static-toolpath
-source: [02-VERIFICATION.md]
+source: [02-VERIFICATION.md, user: "Phase two problems.md"]
 started: 2026-08-14T10:30:00Z
-updated: 2026-08-14T10:45:00Z
+updated: 2026-08-14T11:15:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: Print sample visual render
+number: 6
+name: Nav cube axis-triad visibility
 expected: |
-  Toolpath in front of the robot on the floor, dashed gray rapids, solid thicker
-  warm cutting line, clearly distinguishable in greyscale.
+  The XYZ axis triad on the navigation cube's back corner is visible through
+  the cube's faces, not fully occluded by them.
 awaiting: user response
 
 ## Tests
 
 ### 1. Print sample visual render
 expected: Toolpath in front of the robot on the floor, dashed gray rapids, solid thicker warm cutting line, clearly distinguishable in greyscale.
-result: orchestrator pre-check via headless browser (Playwright) — toolpath renders correctly anchored in front of the robot's rail; cutting path (3-layer inset squares) clearly visible in warm orange. Ground-truth scene data confirms all 7 rapid segments are computed and passed to the render batch (14 points = 7×2), but they are individually short (4–20mm against a 150mm span) and were not visually distinguishable by eye in the screenshots taken. Not a data/wiring bug — the pipeline is correct — but worth a look on your own screen where you can orbit/zoom interactively. **Needs your eyeball check.**
+result: issue
+reported: "User (via Phase two problems.md, items 1-4): position is too low (should sit above the rail rig, roughly half the robot's height); the toolpath sits behind/under the rail rig's carriage instead of clearly in front of it with a visible gap; there is no workbench/table for it to rest on — it just floats over the bare floor plane; the lines are too thin and there's no way to see where each operation starts/ends (wants thicker orange bullet-point markers)."
+severity: major
 
 ### 2. Mill sample visual render
 expected: 3 depth passes at visibly distinct heights, smooth curved corners (not chorded), no seam at arc-to-line junctions.
@@ -37,13 +39,65 @@ result: orchestrator pre-check — confirmed via a genuine intercepted 404 (rena
 expected: A label stating samples are interpreted in millimetres is visible beside the dropdown.
 result: orchestrator pre-check — "Samples are interpreted in mm." is visible beside the dropdown in every screenshot taken. **Confirmed by orchestrator; spot-check optional.**
 
+### 6. Nav cube axis-triad visibility
+expected: The XYZ axis triad on the navigation cube's back corner is visible through the cube's faces, not fully occluded by them.
+result: issue
+reported: "User (via Phase two problems.md, item 5): cube opacity should be reduced so the XYZ axes are visible."
+severity: cosmetic
+
 ## Summary
 
-total: 5
+total: 6
 passed: 4
-issues: 0
-pending: 1
+issues: 2
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-02-01
+  truth: "The toolpath sits well above floor level (roughly half the robot's height) on a visible workbench, not floating over the bare floor."
+  status: failed
+  reason: "User reported (Phase two problems.md #1, #3): print position too low; needs a workbench under it since resting directly on the floor plane reads as illogical."
+  severity: major
+  test: 1
+  root_cause: "TOOLPATH_ANCHOR_OFFSET.y (src/gcode/toolpath-anchor.ts) is hardcoded to 0 (world floor plane) and no workbench mesh exists anywhere in the scene — the toolpath's Y=0 min-point sits directly on the bare floor plane rendered in CellScene.tsx."
+  artifacts: [src/gcode/toolpath-anchor.ts, src/scene/CellScene.tsx]
+  missing: ["A Workbench scene component (new mesh) whose top surface height becomes the new TOOLPATH_ANCHOR_OFFSET.y target", "toolpath-anchor.test.ts assertions updated for the new anchor height"]
+- gap_id: G-02-02
+  truth: "The toolpath sits clearly in front of the robot/rail rig's carriage with a visible clearance gap, never overlapping or reading as underneath it."
+  status: failed
+  reason: "User reported (Phase two problems.md #2): trajectory shouldn't be behind/under the rig; needs more distance from it."
+  severity: major
+  test: 1
+  root_cause: "Traced numerically against the live constants: robot mount is at world Z=RIG_Z_OFFSET=0.5; TOOLPATH_ANCHOR_OFFSET.z = RIG_Z_OFFSET + ROBOT_REACH_ENVELOPE/2 = 0.75, so the toolpath's bounding-box center sits at Z=0.75. The print sample's own Z half-extent is ~0.075m, mill sample's ~0.06m, so each sample's near (robot-facing) edge lands at roughly Z=0.675-0.69 — the carriage's own front face (CARRIAGE_BASE_DEPTH/2 = 0.19m forward of the mount) extends to Z=0.69. The print sample's near edge (0.675) is measurably BEHIND the carriage's front face (0.69) — a real ~1.5cm overlap, not a visual illusion. Root cause: TOOLPATH_ANCHOR_OFFSET.z was derived as a fraction of ROBOT_REACH_ENVELOPE with no accounting for the carriage's own physical footprint depth."
+  artifacts: [src/gcode/toolpath-anchor.ts, src/scene/RailRig.tsx]
+  missing: ["Anchor Z derivation that adds explicit clearance beyond CARRIAGE_BASE_DEPTH/2 (or CARRIAGE_BLOCK_DEPTH/2, whichever is the true forward-most rig extent), not just a flat fraction of the reach envelope", "toolpath-anchor.test.ts assertion that both samples' near-Z-edge clears the carriage's front face by a positive, named margin"]
+- gap_id: G-02-03
+  truth: "The rendered toolpath lines are visibly thicker, and the start and end of the toolpath are marked with clearly visible, thicker point markers in the same warm-orange family."
+  status: failed
+  reason: "User reported (Phase two problems.md #4): make the trajectory line thicker; add start/end bullet-point markers, same orange, thicker than the line."
+  severity: minor
+  test: 1
+  root_cause: "src/scene/Toolpath.tsx sets lineWidth=2 (rapid) / lineWidth=3 (cutting) on drei's <Line>, both quite thin at scene scale; no marker geometry exists anywhere for path start/end. Note: this phase's toolpath is one continuous parsed path, not yet split into a named-operations list — that structure is ROADMAP Phase 6 (\"Operations Tree + Mill Engagement Coloring\" — per-operation start/end markers). For Phase 2, the closest honest scope is marking the OVERALL toolpath's start and end points, not per-operation markers; flag to the user that granular per-operation markers are Phase 6's job."
+  artifacts: [src/scene/Toolpath.tsx]
+  missing: ["Increased lineWidth on both Line batches", "Small sphere/marker meshes at toolpath.segments[0].points[0] (start) and the last point of the last segment (end), colored CUTTING_COLOR, sized visibly larger than the line width"]
+- gap_id: G-02-04
+  truth: "The navigation cube's XYZ axis triad is visible through the cube's faces."
+  status: failed
+  reason: "User reported (Phase two problems.md #5): cube opacity should be reduced so axes show through."
+  severity: cosmetic
+  test: 6
+  root_cause: "src/scene/NavCube.tsx renders <GizmoViewcube color=\"#FAFAFA\" .../> with no opacity prop — drei's GizmoViewcube defaults to opacity=1 (confirmed in installed source, node_modules/@react-three/drei/core/GizmoViewcube.js: FaceMaterial sets transparent:true, opacity given as a prop, defaulting to 1). The axis triad (three arrowHelpers, already built as a Phase-1 checkpoint follow-up) is anchored at the cube's Left/Bottom/Back corner and is fully depth-occluded by the cube's own opaque near faces from the default viewing angle. Note this is a Phase 1 (NavCube.tsx) file, not Phase 2, but is included here per the user's combined report."
+  artifacts: [src/scene/NavCube.tsx]
+  missing: ["opacity prop passed to <GizmoViewcube> (drei already supports this — a one-line change), tuned so face labels stay legible while the axis triad reads through"]
+
+## Deferred Follow-Ups
+
+- test: N/A (Phase two problems.md #6)
+  idea: "User asked whether the toolpath should eventually show the robot's own joint movement, not just the printed/milled path. Answer (not a gap): the Phase 2 line is intentionally the tool-tip g-code path only (SIM-01/SIM-02 scope). The robot's own motion along that path is Phase 3 (Inverse Kinematics + Trajectory Compile + Scrub) and Phase 4 (Playback Engine) — already on the roadmap, not missing scope."
+  deferred_at: 2026-08-14
+- test: N/A (Phase two problems.md #7)
+  idea: "User asked whether print/mill toolpath color should differ, and whether robot-movement (once built) should use a different color family. Recommendation: keep rapid=gray/cutting=orange consistent across both samples (only one is ever shown at a time, so a second color axis adds no disambiguation value); when Phase 3/4 render robot joint motion, give it a visually distinct color family (not orange/gray) so it never reads as another toolpath class. No code change this phase — carry into Phase 3/4 UI-SPEC."
+  deferred_at: 2026-08-14
