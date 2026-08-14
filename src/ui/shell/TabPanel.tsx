@@ -1,58 +1,28 @@
 import type { ComponentType } from 'react'
-import { TAB_DEFS, type TabId } from '../tabs/tab-registry'
+import { type TabId } from '../tabs/tab-registry'
 import { useUiShellStore } from '../../store/uiShellStore'
-import { PanelShell, PhaseNote } from './PlaceholderPanel'
-
-// Temporary stub panels — Task 3 replaces each of these with a real
-// component from `src/ui/tabs/`. Built from the same `PanelShell`/
-// `PhaseNote` primitives the real panels will use, so nothing about the
-// shell's shape changes when they land. One stub per tab (rather than one
-// generic component parameterised by id) so each entry below is a distinct
-// value `PANELS` can be checked against.
-function DashboardStub() {
-  return findTabStub('dashboard')
-}
-function OperationsStub() {
-  return findTabStub('operations')
-}
-function SetupStub() {
-  return findTabStub('setup')
-}
-function VisionStub() {
-  return findTabStub('vision')
-}
-function CalibrateStub() {
-  return findTabStub('calibrate')
-}
-function IoStub() {
-  return findTabStub('io')
-}
-function OptimizationStub() {
-  return findTabStub('optimization')
-}
-
-function findTabStub(id: TabId) {
-  const tab = TAB_DEFS.find((candidate) => candidate.id === id)
-  const label = tab?.label ?? id
-  const phase = tab?.phase ?? 8
-  return (
-    <PanelShell title={label}>
-      <PhaseNote phase={phase}>this panel's real content lands here.</PhaseNote>
-    </PanelShell>
-  )
-}
+import DashboardPanel from '../tabs/DashboardPanel'
+import OperationsPanel from '../tabs/OperationsPanel'
+import SetupPanel from '../tabs/SetupPanel'
+import VisionPanel from '../tabs/VisionPanel'
+import CalibratePanel from '../tabs/CalibratePanel'
+import IoPanel from '../tabs/IoPanel'
+import OptimizationPanel from '../tabs/OptimizationPanel'
 
 // Typed as `Record<TabId, ComponentType>` so TypeScript itself fails the
-// build if a registry id has no panel behind it — Task 3 replaces each
-// value here with the corresponding real panel from `src/ui/tabs/`.
+// build if a registry id has no panel behind it. Every value below is a
+// real, phase-labelled placeholder panel from `src/ui/tabs/` — none of
+// them import the simulation store or compute anything from a trajectory
+// (Task 3 gate: `tab-registry.test.ts` Test 6 plus the plan's cellStore
+// import grep).
 export const PANELS: Record<TabId, ComponentType> = {
-  dashboard: DashboardStub,
-  operations: OperationsStub,
-  setup: SetupStub,
-  vision: VisionStub,
-  calibrate: CalibrateStub,
-  io: IoStub,
-  optimization: OptimizationStub,
+  dashboard: DashboardPanel,
+  operations: OperationsPanel,
+  setup: SetupPanel,
+  vision: VisionPanel,
+  calibrate: CalibratePanel,
+  io: IoPanel,
+  optimization: OptimizationPanel,
 }
 
 const panelStyle: React.CSSProperties = {
