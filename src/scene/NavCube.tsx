@@ -40,8 +40,8 @@ const AXIS_COLOR_Z = 0x0000ff // blue
  * (Front/Top/Bottom/Back/Left/Right); click-to-snap is handled internally via
  * the gizmo's own camera tween — no click handler is written here either.
  *
- * Three `THREE.ArrowHelper` instances (via the `arrowHelper` R3F intrinsic)
- * replace the previous `AxesHelper` — `AxesHelper` has no arrowheads, and
+ * Three `THREE.ArrowHelper` instances (via R3F's lowercase arrow-helper
+ * intrinsic element) replace the previous `AxesHelper` — `AxesHelper` has no arrowheads, and
  * the user asked for visibly arrowed axis lines tracing the cube's edges.
  * Standard X=red/Y=green/Z=blue coloring is set explicitly per arrow to
  * match the "standard axis colors" ask.
@@ -59,6 +59,10 @@ export default function NavCube() {
         strokeColor="#E4E7EB"
         hoverColor="#2563EB"
         textColor="#08060d"
+        // G-02-04: 0.6 balances face-label legibility against letting the
+        // Left/Bottom/Back axis triad read through the cube's near faces —
+        // closes the "axis triad fully occluded by opaque faces" UAT report.
+        opacity={0.6}
       />
       <arrowHelper
         args={[AXES_X_DIR, AXES_ORIGIN, AXES_LENGTH, AXIS_COLOR_X, AXES_HEAD_LENGTH, AXES_HEAD_WIDTH]}
