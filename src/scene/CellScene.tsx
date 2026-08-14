@@ -10,6 +10,7 @@ import Toolpath from './Toolpath'
 import ScrubMarker from './ScrubMarker'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
+import { useCellStore } from '../store/cellStore'
 
 // UI-SPEC Dominant / Secondary tones — kept in sync with the DOM background (index.css)
 // so the WebGL canvas and the surrounding page chrome don't clash (D-06).
@@ -33,6 +34,13 @@ const SECONDARY_TONE = '#E4E7EB'
  *      default framing the listener restores)
  */
 export default function CellScene() {
+  // WR-03 review follow-up: read here (CellScene already imports both
+  // RailRig and, transitively, the store) and pass down as a prop, so
+  // RailRig.tsx stays a pure presentational component and doesn't add a
+  // second, more direct edge into the pre-existing
+  // RailRig -> cellStore -> compile -> toolpath-anchor -> RailRig cycle.
+  const railPos = useCellStore((state) => state.trajectory?.railPos ?? RAIL_CENTER_X)
+
   return (
     // `position: fixed` + `inset: 0` sizes this wrapper directly against the
     // viewport, independent of any ancestor's percentage-height chain — the
@@ -75,7 +83,7 @@ export default function CellScene() {
             default camera view (checkpoint follow-up item 2) rather than
             straddling the origin symmetrically. */}
         <group name="rail-rig-mount" position={[0, 0, RIG_Z_OFFSET]}>
-          <RailRig />
+          <RailRig railPos={railPos} />
         </group>
 
         {/* G-02-01 (plan 02-04): the workbench the toolpath visibly rests

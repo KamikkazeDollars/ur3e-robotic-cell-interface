@@ -1,5 +1,4 @@
 import { RAIL_TRAVEL, RAIL_CENTER_X } from '../kinematics'
-import { useCellStore } from '../store/cellStore'
 import RobotModel from './RobotModel'
 
 // UI-SPEC Secondary tone (#E4E7EB) — track, end-stops, and carriage recede
@@ -121,17 +120,23 @@ const RAIL_Z_OFFSETS = [-RAIL_GAP / 2, RAIL_GAP / 2] as const
  *
  * Plan 03-02: the carriage's X is now DERIVED from the compiled
  * trajectory's own resolved rail position (`trajectory.railPos`), read via
- * a reactive Zustand selector — not a per-frame `useFrame` mutation like
- * `RobotPose.tsx`'s imperative pose driver, because this value changes at
- * most once per sample selection (`compileTrajectory` resolves one rail
- * position for the whole toolpath, D-01), exactly the coarse cadence the
- * store header sanctions for React-state writes. With no trajectory loaded
- * (nothing selected yet) it falls back to `RAIL_CENTER_X`, so the carriage
- * renders at the rail's centre of travel exactly as it did in Phase 1.
+ * a reactive Zustand selector in `CellScene.tsx` and passed down as the
+ * `railPos` prop — not read from the store directly in this file (WR-03
+ * review follow-up: a direct `useCellStore` import here added a second,
+ * more direct edge into an already-existing module cycle
+ * `RailRig -> cellStore -> compile -> toolpath-anchor -> RailRig`; routing
+ * the read through `CellScene.tsx`, which already imports both `RailRig`
+ * and the store, keeps this component a pure presentational one again
+ * without touching the pre-existing cycle), not a per-frame `useFrame`
+ * mutation like `RobotPose.tsx`'s imperative pose driver, because this
+ * value changes at most once per sample selection (`compileTrajectory`
+ * resolves one rail position for the whole toolpath, D-01), exactly the
+ * coarse cadence the store header sanctions for React-state writes. With
+ * no trajectory loaded (nothing selected yet) `CellScene.tsx` falls back
+ * to `RAIL_CENTER_X`, so the carriage renders at the rail's centre of
+ * travel exactly as it did in Phase 1.
  */
-export default function RailRig() {
-  const railPos = useCellStore((state) => state.trajectory?.railPos ?? RAIL_CENTER_X)
-
+export default function RailRig({ railPos }: { railPos: number }) {
   return (
     <group>
       {RAIL_Z_OFFSETS.map((z) => (
