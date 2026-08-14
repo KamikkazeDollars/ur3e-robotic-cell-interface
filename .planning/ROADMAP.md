@@ -72,7 +72,7 @@ Plans:
 
 *Scope note: "upload" is scoped to curated, bundled sample files for this phase per locked decision D-01 (02-CONTEXT.md) — no file-upload UI is built.*
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -85,7 +85,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — Camera auto-fit to the selected toolpath, parse loading/error surface, unit disclosure, and the visual sign-off (SIM-01, SIM-02)
+- [x] 02-03-PLAN.md — Camera auto-fit to the selected toolpath, parse loading/error surface, unit disclosure, and the visual sign-off (SIM-01, SIM-02)
 
 ### Phase 3: Inverse Kinematics + Trajectory Compile + Scrub
 
@@ -179,7 +179,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
-| 2. G-code Import + Static Toolpath | 2/3 | In Progress|  |
+| 2. G-code Import + Static Toolpath | 3/3 | In Progress|  |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 0/? | Not started | - |
 | 4. Playback Engine | 0/? | Not started | - |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
