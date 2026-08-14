@@ -69,6 +69,38 @@ describe('useCellStore — robotLoadStatus', () => {
   })
 })
 
+describe('useCellStore — setScrubFraction', () => {
+  it('clamps a value above 1 down to 1', () => {
+    useCellStore.getState().setScrubFraction(1.5)
+    expect(useCellStore.getState().scrubFraction).toBe(1)
+  })
+
+  it('clamps a value below 0 up to 0', () => {
+    useCellStore.getState().setScrubFraction(-0.5)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+  })
+
+  it('passes through an in-range value unchanged', () => {
+    useCellStore.getState().setScrubFraction(0.42)
+    expect(useCellStore.getState().scrubFraction).toBe(0.42)
+  })
+
+  it('falls back to 0 instead of propagating NaN', () => {
+    useCellStore.getState().setScrubFraction(0.7)
+    useCellStore.getState().setScrubFraction(NaN)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+  })
+
+  it('falls back to 0 instead of propagating +/- Infinity', () => {
+    useCellStore.getState().setScrubFraction(0.7)
+    useCellStore.getState().setScrubFraction(Infinity)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    useCellStore.getState().setScrubFraction(0.7)
+    useCellStore.getState().setScrubFraction(-Infinity)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+  })
+})
+
 describe('camera-defaults', () => {
   it('exports DEFAULT_CAMERA_POSITION as a three-number tuple', () => {
     expect(DEFAULT_CAMERA_POSITION).toHaveLength(3)

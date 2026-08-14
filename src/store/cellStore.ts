@@ -103,7 +103,8 @@ export const useCellStore = create<CellState>((set) => ({
   toolpath: null,
   trajectory: null,
   scrubFraction: 0,
-  setScrubFraction: (fraction) => set({ scrubFraction: Math.min(1, Math.max(0, fraction)) }),
+  setScrubFraction: (fraction) =>
+    set({ scrubFraction: Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0 }),
   selectSample: async (sampleId) => {
     selectSampleRequestId += 1
     const requestId = selectSampleRequestId
