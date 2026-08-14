@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: Inverse Kinematics + Trajectory Compile + Scrub
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-08-14T17:49:51.647Z"
+stopped_at: Completed 03-02-PLAN.md and 03-03-PLAN.md (Phase 03 wave 2 complete)
+last_updated: "2026-08-14T17:53:11.188Z"
 last_activity: 2026-08-14
-last_activity_desc: Phase 02 execution started
+last_activity_desc: Phase 03 wave 2 complete (03-02, 03-03)
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-13)
 
 Phase: 03 — Inverse Kinematics + Trajectory Compile + Scrub
 Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-08-14 — Phase 3 Plan 1 complete
+Status: All plans executed, pending phase verification
+Last activity: 2026-08-14 — Phase 3 wave 2 complete (03-02, 03-03)
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 92%
 | Phase 01 P04 | 75min | 2 tasks | 20 files |
 | Phase 03 P01 | 240min | 2 tasks | 17 files |
 | Phase 03 P02 | 7min | 3 tasks | 10 files |
+| Phase 03 P03 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 3, Plan 1]: Checkpoint-approved scope expansion — added UR3E_PARKED_POSE (off-table idle stance, distinct from UR3E_READY_POSE which stays untouched since toolpath-anchor.ts derives WORKBENCH_TOP_Y from it) and a real IK-solved travel move, revising the must-have that scrub fraction 0 is the toolpath's first point to fraction 0 being the parked pose instead.
 - [Phase ?]: Corrected shoulder-singularity distance check to compare against the joint-4 DH offset (its true theoretical floor), not zero
 - [Phase ?]: RailRig reads trajectory.railPos via a reactive Zustand selector (not useFrame), matching the store's coarse-cadence performance discipline
+- [Phase ?]: Chose #0F766E deep teal for the D-07 scrub marker, distinct from rapid/cutting/accent tones
+- [Phase ?]: ScrubMarker.tsx duplicates RobotPose.tsx's sample-index derivation verbatim rather than sharing a helper, so the marker and the robot pose can never silently drift apart (SIM-05)
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-14T17:49:51.625Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-08-14T17:53:11.162Z
+Stopped at: Completed 03-02-PLAN.md and 03-03-PLAN.md (Phase 03 wave 2 complete)
 Resume file: None
