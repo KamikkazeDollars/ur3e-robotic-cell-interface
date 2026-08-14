@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import NavCube from './NavCube'
 import CameraResetListener from './CameraResetListener'
+import ToolpathCameraFit from './ToolpathCameraFit'
 import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET, FLOOR_Z_CENTER } from './RailRig'
 import Toolpath from './Toolpath'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
@@ -19,7 +20,10 @@ const SECONDARY_TONE = '#E4E7EB'
  * Composition order (per PATTERNS.md's definitive ordering):
  *   lights (ambient + directional) -> floor plane -> rail/robot mount point
  *   -> Toolpath (plan 02-01, mounted after the rig, before OrbitControls)
- *   -> OrbitControls (makeDefault) -> NavCube
+ *   -> OrbitControls (makeDefault) -> NavCube -> CameraResetListener
+ *   -> ToolpathCameraFit (plan 02-03, mounted after CameraResetListener —
+ *      D-05's toolpath fit is a distinct behaviour from the Reset View
+ *      default framing the listener restores)
  */
 export default function CellScene() {
   return (
@@ -75,6 +79,7 @@ export default function CellScene() {
         <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />
         <CameraResetListener />
+        <ToolpathCameraFit />
       </Canvas>
     </div>
   )
