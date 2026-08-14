@@ -6,6 +6,7 @@ export {
   UR3E_JOINT_NAMES,
   UR3E_HOME_POSE,
   UR3E_READY_POSE,
+  UR3E_PARKED_POSE,
   type JointAngles,
 } from './ur3e-dh';
 
@@ -33,3 +34,5 @@ export {
   jointSpaceDistance,
   TOOL_FLANGE_OFFSET_Z,
 } from './inverse-kinematics';
+
+export { toUrdfJointAngles, URDF_SHOULDER_PAN_OFFSET } from './urdf-joint-mapping';

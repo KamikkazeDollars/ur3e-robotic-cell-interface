@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import URDFLoader, { type URDFRobot } from 'urdf-loader'
-import { UR3E_JOINT_NAMES, UR3E_READY_POSE } from '../kinematics'
+import { UR3E_JOINT_NAMES, UR3E_PARKED_POSE, toUrdfJointAngles } from '../kinematics'
 import { useCellStore } from '../store/cellStore'
 import RobotPose from './RobotPose'
 
@@ -30,12 +30,22 @@ function useUR3e() {
         // consistent with the kinematics module's rail convention.
         loadedRobot.rotation.x = -Math.PI / 2
 
-        // D-08: apply the displayed "ready" pose, never the home/test pose
-        // the FK unit test asserts on — the home pose renders as a flat
-        // silhouette. Zips the two kinematics-barrel exports together by
-        // index rather than restating either list.
+        // D-08 (revised 03-01): apply the displayed parked pose — visibly
+        // off the workbench, never the home/test pose the FK unit test
+        // asserts on (which renders as a flat silhouette) and no longer
+        // the original Phase 1 ready pose (which, once Phase 3 could
+        // finally cross-check it against the real workbench, turned out to
+        // sit up over the table — see `UR3E_PARKED_POSE`'s doc comment).
+        // Zips the two kinematics-barrel exports together by index rather
+        // than restating either list. Routes every DH-native joint tuple
+        // through `toUrdfJointAngles` before it reaches `setJointValue` —
+        // see that function's doc comment for why: the URDF's
+        // `shoulder_pan_joint` frame is rotated 180 degrees about Z from
+        // this project's DH convention, a divergence baked into the
+        // official `Universal_Robots_ROS2_Description` URDF itself.
+        const urdfParkedPose = toUrdfJointAngles(UR3E_PARKED_POSE)
         UR3E_JOINT_NAMES.forEach((jointName, i) => {
-          loadedRobot.setJointValue(jointName, UR3E_READY_POSE[i])
+          loadedRobot.setJointValue(jointName, urdfParkedPose[i])
         })
 
         // D-03: the flange stays bare — no print head / mill spindle mesh

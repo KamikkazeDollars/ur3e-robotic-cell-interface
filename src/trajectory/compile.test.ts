@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import { compileTrajectory, dhFrameToScene } from './compile'
 import { flattenToolpathPoints } from './arc-length'
-import { forwardKinematics, RAIL_CENTER_X } from '../kinematics'
+import { forwardKinematics, RAIL_CENTER_X, UR3E_PARKED_POSE } from '../kinematics'
 import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET } from '../gcode/toolpath-anchor'
 import type { ClassifiedSegment, ParsedToolpath } from '../gcode/parseToolpath'
 
@@ -84,9 +84,51 @@ describe('compileTrajectory', () => {
     }
   })
 
-  it("the first and last samples' points equal the flattened path's first and last points exactly", () => {
+  it("scrub fraction 0 is the literal parked pose, and the last sample's point equals the flattened path's last point exactly", () => {
+    // Revised must-have (scope expansion, checkpoint follow-up): fraction 0
+    // is the authored home/parked waypoint, not the toolpath's own first
+    // point — the travel move's END is what lands on the toolpath start
+    // (see the next test).
+    expect(result.samples[0].joints).toEqual(UR3E_PARKED_POSE)
+    expect(result.samples[0].scrubFraction).toBe(0)
+
     const flattened = flattenToolpathPoints(toolpath.segments)
-    expect(result.samples[0].point).toEqual(flattened[0])
-    expect(result.samples[result.samples.length - 1].point).toEqual(flattened[flattened.length - 1])
+    const last = result.samples[result.samples.length - 1]
+    expect(last.point).toEqual(flattened[flattened.length - 1])
+    expect(last.scrubFraction).toBe(1)
+  })
+
+  it('the home-to-start travel move lands EXACTLY on the toolpath\'s first point at some sample', () => {
+    // The revised must-have's core claim: not "close to", but an EXACT
+    // scene-space match — pointAtFraction's own exact-endpoint guarantee,
+    // applied to the travel sub-path, is what makes this exact rather than
+    // a discretisation coincidence.
+    const flattened = flattenToolpathPoints(toolpath.segments)
+    const boundarySample = result.samples.find(
+      (sample) =>
+        sample.point[0] === flattened[0][0] &&
+        sample.point[1] === flattened[0][1] &&
+        sample.point[2] === flattened[0][2],
+    )
+    expect(boundarySample).toBeDefined()
+    // It must not be the very first sample (fraction 0 is the parked pose,
+    // per the test above) — there is a genuine travel move in between.
+    expect(boundarySample!.scrubFraction).toBeGreaterThan(0)
+    expect(boundarySample!.scrubFraction).toBeLessThan(1)
+  })
+
+  it('the travel move is genuinely composed of multiple independent solves, not a single synthesised hop (SIM-05)', () => {
+    const flattened = flattenToolpathPoints(toolpath.segments)
+    const boundaryFraction = result.samples.find(
+      (sample) =>
+        sample.point[0] === flattened[0][0] &&
+        sample.point[1] === flattened[0][1] &&
+        sample.point[2] === flattened[0][2],
+    )!.scrubFraction
+
+    const intermediateTravelSamples = result.samples.filter(
+      (sample) => sample.scrubFraction > 0 && sample.scrubFraction < boundaryFraction,
+    )
+    expect(intermediateTravelSamples.length).toBeGreaterThan(0)
   })
 })

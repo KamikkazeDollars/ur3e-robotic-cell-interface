@@ -14,10 +14,10 @@ import {
   validBranches,
   pickClosestBranch,
   forwardKinematics,
-  UR3E_READY_POSE,
+  UR3E_PARKED_POSE,
   type JointAngles,
 } from '../kinematics'
-import { flattenToolpathPoints, buildArcLengthTable, pointAtFraction } from './arc-length'
+import { flattenToolpathPoints, buildArcLengthTable, pointAtFraction, type ArcLengthTable } from './arc-length'
 
 /**
  * Converts a scene-space point into this project's raw DH frame, relative
@@ -60,14 +60,23 @@ export const MAX_TRAJECTORY_SAMPLES = 4000
  * approximate pose. */
 export type TrajectoryStatus = 'ready' | 'frozen-at-unreachable'
 
-/** One compiled point along the trajectory. Note: plan 03-02 adds a
- * `singularityFlags` field — consumers should not assume this shape is
- * final within Phase 3. */
+/** One compiled point along the trajectory — either a prepended
+ * home-to-toolpath-start TRAVEL sample or a toolpath sample proper (see
+ * `compileTrajectory`'s doc comment for the two-phase scrubFraction
+ * layout). Note: plan 03-02 adds a `singularityFlags` field — consumers
+ * should not assume this shape is final within Phase 3. */
 export interface TrajectorySample {
-  /** Cumulative arc-length fraction in [0, 1], monotonically non-decreasing
-   * across `CompiledTrajectory.samples`. */
+  /** Cumulative arc-length fraction in [0, 1] over the WHOLE compiled
+   * path (travel move + toolpath combined), monotonically non-decreasing
+   * across `CompiledTrajectory.samples`. 0 is always `UR3E_PARKED_POSE`'s
+   * own TCP point; the toolpath's own first point lands at whatever
+   * fraction the travel move's length works out to, exactly (never
+   * approximately — see `compileTrajectory`); 1 is always the toolpath's
+   * own last point. */
   scrubFraction: number
-  /** The scene-space toolpath point this sample was solved against. */
+  /** The scene-space point this sample was solved against — the parked
+   * pose's own TCP position, a point along the straight travel line, or a
+   * toolpath point, depending on which phase this sample belongs to. */
   point: [number, number, number]
   /** The chosen IK solution for `point`, continuous with the previous
    * sample's joints (D-03). */
@@ -93,15 +102,56 @@ export interface CompiledTrajectory {
 }
 
 /**
+ * Solves one task-space scene point into an in-limit, continuity-selected
+ * joint tuple — the single per-point solve step both the prepended travel
+ * move and the toolpath proper reuse, so there is exactly one place that
+ * performs a scene-point IK solve (mirrors `sceneToDhFrame`/
+ * `buildToolDownTarget` each having exactly one call site in spirit).
+ * Returns `null` when no in-limit branch exists (D-06 — the caller freezes
+ * the walk rather than substituting an approximate pose).
+ */
+function solvePointToJoints(
+  point: readonly [number, number, number],
+  railOffsetFromCenter: number,
+  previousJoints: JointAngles,
+): JointAngles | null {
+  const dh = sceneToDhFrame(point, ROBOT_MOUNT_WORLD)
+  // Arm-relative target: subtract the rail's own offset from centre off
+  // the x component only, mirroring the pure prepended `transX(railPos)`
+  // translation `forwardKinematics` composes the rail as — so solving
+  // against this point and then re-applying that same translation via
+  // `forwardKinematics(joints, railOffsetFromCenter)` reproduces `dh`.
+  const armRelative = { x: dh.x - railOffsetFromCenter, y: dh.y, z: dh.z }
+  const target = buildToolDownTarget(armRelative)
+  const candidates = solveUR6IK(target)
+  const inLimit = validBranches(candidates)
+  return pickClosestBranch(inLimit, previousJoints)
+}
+
+/**
  * Compiles a parsed toolpath into a scrubbable IK trajectory. Pure and
  * synchronous — never throws.
+ *
+ * The compiled sample array is TWO phases sharing one monotonic
+ * `scrubFraction` range: a prepended TRAVEL move from `UR3E_PARKED_POSE`
+ * (the robot's off-table idle stance) to the toolpath's own first point,
+ * then the toolpath itself. This is scope added after this plan's original
+ * "scrub fraction 0 is the toolpath's exact first point" must-have — the
+ * revised meaning is "the END of the home-to-start travel move lands
+ * exactly at the toolpath's first point", which the two-phase arc-length
+ * walk below guarantees exactly (never approximately) via `pointAtFraction`'s
+ * own exact-endpoint guarantee, applied independently to each phase's own
+ * sub-path before the two fraction ranges are stitched together.
  *
  * Anti-pattern this module must never adopt: sampling density comes from
  * solving MORE task-space points, never from blending two already-solved
  * joint tuples — a blended joint value traces a bowed path in task space
  * even when both endpoints are individually correct (03-RESEARCH.md
- * Pitfall 13). Every sample below is an independent `solveUR6IK` call
- * against its own task-space point.
+ * Pitfall 13). Every sample below (other than the literal, authored
+ * `UR3E_PARKED_POSE` waypoint at scrub fraction 0) is an independent
+ * `solveUR6IK` call against its own task-space point — the travel move is
+ * real IK-solved samples along a straight line, never an interpolated
+ * shortcut between two already-solved joint tuples (SIM-05).
  */
 export function compileTrajectory(toolpath: ParsedToolpath): CompiledTrajectory {
   const points = flattenToolpathPoints(toolpath.segments)
@@ -110,50 +160,88 @@ export function compileTrajectory(toolpath: ParsedToolpath): CompiledTrajectory 
     return { samples: [], railPos: RAIL_CENTER_X, status: 'ready', requestedSampleCount: 0 }
   }
 
-  const table = buildArcLengthTable(points)
+  const toolpathTable = buildArcLengthTable(points)
 
   // One rail position for the whole toolpath, resolved once before any
-  // solve runs (D-01).
+  // solve runs (D-01) — derived from the WORK the operation performs, not
+  // from the parking manoeuvre either side of it.
   const railPos = resolveRailPosition(points, ROBOT_MOUNT_WORLD)
   const railOffsetFromCenter = railPos - RAIL_CENTER_X
 
-  const rawSampleCount = Math.ceil(table.totalLength / TRAJECTORY_SAMPLE_SPACING_M) + 1
-  const sampleCount = Math.min(MAX_TRAJECTORY_SAMPLES, Math.max(2, rawSampleCount))
+  // The parked pose's own task-space TCP position, at this same rail
+  // offset — the straight-line travel move's start point. Computed via
+  // `forwardKinematics` (never hand-derived), so this is a genuine FK
+  // readout of a genuinely authored joint tuple, not a synthesised point.
+  const homeTcpPoint = dhFrameToScene(
+    forwardKinematics(UR3E_PARKED_POSE, railOffsetFromCenter).tcpPosition,
+    ROBOT_MOUNT_WORLD,
+  )
+  const travelPoints: [number, number, number][] = [homeTcpPoint, points[0]]
+  const travelTable = buildArcLengthTable(travelPoints)
+
+  const toolpathRawSampleCount = Math.ceil(toolpathTable.totalLength / TRAJECTORY_SAMPLE_SPACING_M) + 1
+  const toolpathSampleCount = Math.min(MAX_TRAJECTORY_SAMPLES, Math.max(2, toolpathRawSampleCount))
+
+  const travelRawSampleCount = Math.ceil(travelTable.totalLength / TRAJECTORY_SAMPLE_SPACING_M) + 1
+  const travelSampleCount = Math.min(MAX_TRAJECTORY_SAMPLES, Math.max(2, travelRawSampleCount))
+
+  const travelLength = travelTable.totalLength
+  const toolpathLength = toolpathTable.totalLength
+  const totalLength = travelLength + toolpathLength
+  // Degenerate guard only (never actually hit given the >=2-distinct-point
+  // guard above, which lower-bounds toolpathLength): avoids a divide by
+  // zero rather than assuming it can't happen.
+  const safeTotalLength = totalLength > 1e-9 ? totalLength : 1
 
   const samples: TrajectorySample[] = []
-  let previousJoints: JointAngles = UR3E_READY_POSE
+  let previousJoints: JointAngles = UR3E_PARKED_POSE
   let status: TrajectoryStatus = 'ready'
 
-  for (let i = 0; i < sampleCount; i++) {
-    const scrubFraction = i / (sampleCount - 1)
-    const point = pointAtFraction(points, table, scrubFraction)
+  type Phase = { isTravel: boolean; pts: [number, number, number][]; table: ArcLengthTable; sampleCount: number }
+  const phases: Phase[] = [
+    { isTravel: true, pts: travelPoints, table: travelTable, sampleCount: travelSampleCount },
+    { isTravel: false, pts: points, table: toolpathTable, sampleCount: toolpathSampleCount },
+  ]
 
-    const dh = sceneToDhFrame(point, ROBOT_MOUNT_WORLD)
-    // Arm-relative target: subtract the rail's own offset from centre off
-    // the x component only, mirroring the pure prepended `transX(railPos)`
-    // translation `forwardKinematics` composes the rail as — so solving
-    // against this point and then re-applying that same translation via
-    // `forwardKinematics(joints, railOffsetFromCenter)` reproduces `dh`.
-    const armRelative = { x: dh.x - railOffsetFromCenter, y: dh.y, z: dh.z }
+  walk: for (const phase of phases) {
+    // The toolpath phase's own local index 0 is exactly the travel phase's
+    // final point (both resolve to `points[0]`) — skip it so that shared
+    // point is never solved (and never appears in `samples`) twice.
+    const startIndex = phase.isTravel ? 0 : 1
 
-    const target = buildToolDownTarget(armRelative)
-    const candidates = solveUR6IK(target)
-    const inLimit = validBranches(candidates)
-    const chosen = pickClosestBranch(inLimit, previousJoints)
+    for (let i = startIndex; i < phase.sampleCount; i++) {
+      const localFraction = i / (phase.sampleCount - 1)
+      const point = pointAtFraction(phase.pts, phase.table, localFraction)
 
-    if (!chosen) {
-      // D-06: freeze at the last valid pose rather than substituting an
-      // approximate one — never presented as a pose the robot actually
-      // achieves.
-      status = 'frozen-at-unreachable'
-      break
+      let chosen: JointAngles | null
+      if (phase.isTravel && i === 0) {
+        // The literal authored parked pose — not IK-solved. A genuine,
+        // independently-authored waypoint, not one derived by blending
+        // (SIM-05); its FK still round-trips `point` exactly below.
+        chosen = UR3E_PARKED_POSE
+      } else {
+        chosen = solvePointToJoints(point, railOffsetFromCenter, previousJoints)
+      }
+
+      if (!chosen) {
+        // D-06: freeze at the last valid pose rather than substituting an
+        // approximate one — never presented as a pose the robot actually
+        // achieves.
+        status = 'frozen-at-unreachable'
+        break walk
+      }
+
+      const localArcLength = phase.isTravel ? localFraction * travelLength : travelLength + localFraction * toolpathLength
+      const scrubFraction = localArcLength / safeTotalLength
+
+      const tcpPosition = forwardKinematics(chosen, railOffsetFromCenter).tcpPosition
+
+      samples.push({ scrubFraction, point, joints: chosen, railPos, tcpPosition })
+      previousJoints = chosen
     }
-
-    const tcpPosition = forwardKinematics(chosen, railOffsetFromCenter).tcpPosition
-
-    samples.push({ scrubFraction, point, joints: chosen, railPos, tcpPosition })
-    previousJoints = chosen
   }
 
-  return { samples, railPos, status, requestedSampleCount: sampleCount }
+  const requestedSampleCount = travelSampleCount + toolpathSampleCount - 1
+
+  return { samples, railPos, status, requestedSampleCount }
 }

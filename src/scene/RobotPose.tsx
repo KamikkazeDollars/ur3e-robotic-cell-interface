@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import type { URDFRobot } from 'urdf-loader'
-import { UR3E_JOINT_NAMES } from '../kinematics'
+import { UR3E_JOINT_NAMES, toUrdfJointAngles } from '../kinematics'
 import { useCellStore } from '../store/cellStore'
 
 interface RobotPoseProps {
@@ -18,13 +18,18 @@ interface RobotPoseProps {
  *
  * Zips `UR3E_JOINT_NAMES` against the chosen sample's `JointAngles` tuple
  * via `setJointValue`, exactly as `RobotModel.tsx` already does for the D-08
- * ready pose. With no trajectory (or an empty one), this returns early and
- * leaves whatever pose is already applied untouched — with no sample
- * selected, that is the D-08 ready pose `RobotModel.tsx` set on load.
+ * parked pose — including routing through `toUrdfJointAngles` first, so the
+ * URDF's `base_link_inertia` 180-degree frame divergence (see that
+ * function's doc comment) is corrected here too. With no trajectory (or an
+ * empty one), this returns early and leaves whatever pose is already
+ * applied untouched — with no sample selected, that is the D-08 parked
+ * pose `RobotModel.tsx` set on load, which is also `compileTrajectory`'s
+ * scrub-fraction-0 sample, so there is no visual snap on selection.
  *
  * Does NOT touch `robot.rotation.x`: the solved joint angles already live
- * in the DH-native frame `setJointValue` expects; the one-time z-up -> y-up
- * frame rotation is `RobotModel.tsx`'s own concern, set once on load.
+ * in the DH-native frame `setJointValue` expects (once corrected); the
+ * one-time z-up -> y-up frame rotation is `RobotModel.tsx`'s own concern,
+ * set once on load.
  */
 export default function RobotPose({ robot }: RobotPoseProps) {
   useFrame(() => {
@@ -36,8 +41,9 @@ export default function RobotPose({ robot }: RobotPoseProps) {
     const index = Math.min(samples.length - 1, Math.max(0, rawIndex))
     const sample = samples[index]
 
+    const urdfJoints = toUrdfJointAngles(sample.joints)
     UR3E_JOINT_NAMES.forEach((jointName, i) => {
-      robot.setJointValue(jointName, sample.joints[i])
+      robot.setJointValue(jointName, urdfJoints[i])
     })
   })
 
