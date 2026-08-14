@@ -60,6 +60,16 @@ interface CellState {
   selectSample: (sampleId: string) => Promise<void>
 }
 
+/**
+ * Monotonically increasing token guarding `selectSample` against a stale
+ * in-flight response (T-02-10) — the same "incrementing counter, not a
+ * boolean" idiom `resetToken` already establishes in this file. Module
+ * scoped rather than a `CellState` field: it is internal bookkeeping for
+ * discarding superseded async work, never a rendered value, so it has no
+ * business in the store shape components subscribe to.
+ */
+let selectSampleRequestId = 0
+
 export const useCellStore = create<CellState>((set) => ({
   resetToken: 0,
   requestCameraReset: () => set((state) => ({ resetToken: state.resetToken + 1 })),
@@ -69,6 +79,9 @@ export const useCellStore = create<CellState>((set) => ({
   toolpathLoadStatus: 'idle',
   toolpath: null,
   selectSample: async (sampleId) => {
+    selectSampleRequestId += 1
+    const requestId = selectSampleRequestId
+
     const sample = GCODE_SAMPLES.find((candidate) => candidate.id === sampleId)
     if (!sample) {
       set({ selectedSampleId: sampleId, toolpathLoadStatus: 'error', toolpath: null })
@@ -84,9 +97,20 @@ export const useCellStore = create<CellState>((set) => ({
       }
       const gcodeText = await response.text()
       const toolpath = parseToolpath(gcodeText)
+      // Stale-response guard (T-02-10): if a newer selectSample call has
+      // started since this one began, this response is superseded — discard
+      // it rather than stamping a newer selection with an older result. A
+      // slow fetch resolving after a faster, later selection would
+      // otherwise leave the scene showing whichever fetch happened to
+      // resolve last, a last-write-wins race that only shows up on a slow
+      // connection — exactly when a live demo is running.
+      if (requestId !== selectSampleRequestId) return
       set({ toolpath, toolpathLoadStatus: 'ready' })
     } catch (err) {
       console.error('Failed to load g-code sample:', err)
+      // Same discard on the failure path: a slow failure must not stamp an
+      // error status over a newer selection that already succeeded.
+      if (requestId !== selectSampleRequestId) return
       set({ toolpathLoadStatus: 'error', toolpath: null })
     }
   },
