@@ -21,14 +21,22 @@ const FIT_PADDING = 1.3
  * until the user picks one, so — unlike the always-already-framed default
  * camera the reset listener guards — there is no unwanted initial move to
  * skip here.
+ *
+ * Keyed on `toolpathLoadStatus`, not `selectedSampleId`: `selectSample`
+ * (cellStore.ts) sets `selectedSampleId` synchronously, before the async
+ * fetch/parse resolves, at the same moment it resets `toolpath` to null —
+ * so bounds are never available on that transition. `toolpathLoadStatus`
+ * flips to 'ready' only once `toolpath.bounds` is actually populated,
+ * which is the transition this effect needs to react to.
  */
 export default function ToolpathCameraFit() {
   const camera = useThree((state) => state.camera) as ThreePerspectiveCamera
   const controls = useThree((state) => state.controls) as OrbitControlsImpl | null
-  const selectedSampleId = useCellStore((state) => state.selectedSampleId)
+  const toolpathLoadStatus = useCellStore((state) => state.toolpathLoadStatus)
 
   useEffect(() => {
     if (!controls) return
+    if (toolpathLoadStatus !== 'ready') return
     const bounds = useCellStore.getState().toolpath?.bounds
     if (!bounds) return
 
@@ -63,14 +71,14 @@ export default function ToolpathCameraFit() {
     camera.position.copy(center.clone().add(direction.multiplyScalar(distance)))
     controls.target.copy(center)
     controls.update()
-    // Intentionally reacting only to selectedSampleId — camera/controls are
+    // Intentionally reacting only to toolpathLoadStatus — camera/controls are
     // stable object references from R3F's default-controls registration,
     // and the toolpath bounds are re-read from the store fresh on every run
-    // rather than added to the dependency array, so re-parses that don't
-    // change the selected sample id (there are none today) can't re-fire
-    // this effect and fight the user's own subsequent camera moves.
+    // rather than added to the dependency array, so a re-render that doesn't
+    // flip the load status can't re-fire this effect and fight the user's
+    // own subsequent camera moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSampleId])
+  }, [toolpathLoadStatus])
 
   return null
 }
