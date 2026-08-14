@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { parseToolpath, toRenderBuckets } from './parseToolpath'
+import { parseToolpath, toRenderBuckets, MAX_TOOLPATH_SEGMENTS } from './parseToolpath'
 
 function readSample(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8')
@@ -144,5 +144,32 @@ describe('parseToolpath — synthetic edge cases', () => {
     expect(result.segments.length).toBe(1)
     expect(result.segments[0].type).toBe('rapid')
     expect(result.segments.some((s) => s.type === 'cut')).toBe(false)
+  })
+})
+
+describe('parseToolpath — defensive guards (T-02-02)', () => {
+  // Note: `gcode-parser`'s own tokenizer only recognises well-formed numeric
+  // word values (verified this session: a non-numeric X, and an out-of-range
+  // exponential literal like `X1e999`, are both rejected or misread by its
+  // regex tokenizer before a word is ever produced — they never reach
+  // `addLine`/`addArcCurve` as a NaN/Infinity coordinate). The non-finite
+  // guard in `parseToolpath.ts` therefore has no reachable trigger through
+  // this library's real text front door with the two hand-authored bundled
+  // samples; it remains a defensive line for a future upload feature that
+  // might drive the interpreter's callbacks directly. Verified present via
+  // Task 2's acceptance criteria (`isFinite`/`Number.isFinite` grep), not
+  // exercised here as a functional test for that reason.
+
+  it('truncates at MAX_TOOLPATH_SEGMENTS and reports the dropped-command count via skippedMotionCount', () => {
+    const overflowBy = 5
+    const lineCount = MAX_TOOLPATH_SEGMENTS + overflowBy
+    const lines = ['G21', 'G90', 'G17']
+    for (let i = 1; i <= lineCount; i++) {
+      // Every X strictly increases, so no line is ever a zero-length no-op.
+      lines.push(`G1 X${i} Y0 Z0 F600`)
+    }
+    const result = parseToolpath(lines.join('\n'))
+    expect(result.segments.length).toBe(MAX_TOOLPATH_SEGMENTS)
+    expect(result.skippedMotionCount).toBe(overflowBy)
   })
 })
