@@ -98,12 +98,12 @@ Plans:
   1. User can drag a scrub control to any point in the timeline and see the UR3e (including the rail axis) re-pose to accurately match the toolpath at that instant, with no visible snapping or flipping between IK solutions as the scrub position changes
   2. The 7th-axis rail is resolved to a consistent, documented position at each scrub point via a redundancy-resolution heuristic, keeping the robot within joint and travel limits across the full timeline
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Tracer: drag the scrub control and watch the UR3e re-pose along the toolpath via closed-form IK, pinned by round-trip, continuity and rail-resolution tests (SIM-05)
+- [x] 03-01-PLAN.md — Tracer: drag the scrub control and watch the UR3e re-pose along the toolpath via closed-form IK, pinned by round-trip, continuity and rail-resolution tests (SIM-05)
 
 **Wave 2** *(blocked on Wave 1 completion; 03-02 and 03-03 run in parallel)*
 
@@ -190,7 +190,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
 | 2. G-code Import + Static Toolpath | 5/5 | Complete    | 2026-08-14 |
-| 3. Inverse Kinematics + Trajectory Compile + Scrub | 0/3 | Planned | - |
+| 3. Inverse Kinematics + Trajectory Compile + Scrub | 1/3 | In Progress|  |
 | 4. Playback Engine | 0/? | Not started | - |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
 | 6. Operations Tree + Mill Engagement Coloring | 0/? | Not started | - |
