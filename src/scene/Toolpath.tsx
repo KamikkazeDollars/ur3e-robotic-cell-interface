@@ -10,6 +10,19 @@ import { toRenderBuckets } from '../gcode/parseToolpath'
 export const RAPID_COLOR = '#9CA3AF'
 export const CUTTING_COLOR = '#EA580C'
 
+// G-02-03: both line widths roughly doubled from their original values (2/3)
+// — the previous widths read as too thin to clearly distinguish move class
+// at the toolpath's on-screen scale; the cutting width stays larger than the
+// rapid width, preserving the existing visual hierarchy between move classes.
+const RAPID_LINE_WIDTH = 4
+const CUTTING_LINE_WIDTH = 6
+
+// G-02-03: overall start/end marker sphere radius (metres) — sized well
+// above either line's on-screen width at this toolpath's scale (bundled
+// samples span roughly 0.13-0.15m per side) so each marker reads as a
+// clearly visible bullet point, not a speck.
+const MARKER_RADIUS = 0.012
+
 /**
  * Mounts the classified toolpath as exactly two batched drei Line draw
  * calls (D-03/D-04, 02-RESEARCH.md Pattern 3) — one dash-styled gray
@@ -33,6 +46,21 @@ export default function Toolpath() {
     return toRenderBuckets(toolpath.segments)
   }, [toolpath])
 
+  // G-02-03: the overall toolpath's single start and single end point (not
+  // per-operation — this phase's toolpath is one continuous parsed path;
+  // per-operation markers are ROADMAP Phase 6's job). Memoized alongside
+  // `buckets` above, and computed before the early return below, so React's
+  // hook-call order stays stable across renders.
+  const endpoints = useMemo(() => {
+    if (!toolpath || toolpath.segments.length === 0) return null
+    const firstSegment = toolpath.segments[0]
+    const lastSegment = toolpath.segments[toolpath.segments.length - 1]
+    return {
+      start: firstSegment.points[0],
+      end: lastSegment.points[lastSegment.points.length - 1],
+    }
+  }, [toolpath])
+
   if (!buckets) return null
 
   const { rapidPoints, cuttingPoints } = buckets
@@ -47,11 +75,23 @@ export default function Toolpath() {
           dashed
           dashSize={0.02}
           gapSize={0.015}
-          lineWidth={2}
+          lineWidth={RAPID_LINE_WIDTH}
         />
       )}
       {cuttingPoints.length > 0 && (
-        <Line points={cuttingPoints} segments color={CUTTING_COLOR} lineWidth={3} />
+        <Line points={cuttingPoints} segments color={CUTTING_COLOR} lineWidth={CUTTING_LINE_WIDTH} />
+      )}
+      {endpoints && (
+        <>
+          <mesh position={endpoints.start}>
+            <sphereGeometry args={[MARKER_RADIUS, 16, 16]} />
+            <meshStandardMaterial color={CUTTING_COLOR} />
+          </mesh>
+          <mesh position={endpoints.end}>
+            <sphereGeometry args={[MARKER_RADIUS, 16, 16]} />
+            <meshStandardMaterial color={CUTTING_COLOR} />
+          </mesh>
+        </>
       )}
     </>
   )
