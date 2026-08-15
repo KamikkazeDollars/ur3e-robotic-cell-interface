@@ -3,17 +3,17 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: 03
-current_phase_name: Inverse Kinematics + Trajectory Compile + Scrub
+current_phase_name: inverse-kinematics-trajectory-compile-scrub
 status: executing
-stopped_at: Completed quick task 260815-3cn (UI shell scaffold + Red/Dark-Grey retheme)
-last_updated: "2026-08-14T23:43:57.856Z"
-last_activity: 2026-08-14
-last_activity_desc: Phase 03 wave 2 complete (03-02, 03-03)
+stopped_at: Completed 03-05-PLAN.md (marker sizing + guide visibility gap closure, human checkpoint approved)
+last_updated: "2026-08-15T09:34:04.769Z"
+last_activity: 2026-08-15
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 3
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-13)
 
 **Core value:** The 3D toolpath simulation must work flawlessly end-to-end: import g-code → see it rendered as an accurately color-coded, animated robot motion in the 3D cell.
-**Current focus:** Phase 03 — Inverse Kinematics + Trajectory Compile + Scrub
+**Current focus:** Phase 03 — inverse-kinematics-trajectory-compile-scrub
 
 ## Current Position
 
-Phase: 03 — Inverse Kinematics + Trajectory Compile + Scrub
-Plan: 3 of 3
-Status: All plans executed, pending phase verification
-Last activity: 2026-08-14 — Phase 3 wave 2 complete (03-02, 03-03)
+Phase: 03 (inverse-kinematics-trajectory-compile-scrub) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-08-15 — Phase 03 execution started
 
 Progress: [██████████] 100%
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 03 P02 | 7min | 3 tasks | 10 files |
 | Phase 03 P03 | 20min | 2 tasks | 3 files |
 | Phase quick P260815-3cn | 20min | 3 tasks | 20 files |
+| Phase 03 P05 | 18min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,7 @@ Recent decisions affecting current work:
 - [Phase ?]: ScrubMarker.tsx duplicates RobotPose.tsx's sample-index derivation verbatim rather than sharing a helper, so the marker and the robot pose can never silently drift apart (SIM-05)
 - [Phase ?]: [Quick 260815-3cn]: Renamed UI-SPEC role tokens from Tailwind-reserved --color-* to --ui-* — fixed a real bug where @theme inline silently overrode --color-secondary/-accent/-destructive with shadcn's own variables
 - [Phase ?]: [Quick 260815-3cn]: Stood up static Phase 5-8 UI shell scaffolding (7-tab rail, mode bar, placeholder panels) ahead of Phase 4 playback engine, per requirements_status: scaffold-only — no data wired, no behaviour implemented
+- [Phase ?]: [Phase 3, Plan 5]: marker-scale.ts derives all marker/guide sizing from ParsedToolpath.bounds (pure, unit-tested) rather than hardcoded literals; scrubMarkerRadiusFromBounds multiplies the endpoint radius so the scrub/endpoint size hierarchy holds by construction at every toolpath scale
 
 ### Pending Todos
 
@@ -120,6 +122,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-14T23:43:57.833Z
-Stopped at: Completed quick task 260815-3cn (UI shell scaffold + Red/Dark-Grey retheme)
+Last session: 2026-08-15T09:34:04.749Z
+Stopped at: Completed 03-05-PLAN.md (marker sizing + guide visibility gap closure, human checkpoint approved)
 Resume file: None
