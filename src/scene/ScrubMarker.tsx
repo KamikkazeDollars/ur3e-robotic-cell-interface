@@ -18,17 +18,20 @@ const SCRUB_MARKER_COLOR = '#0F766E'
  * a single sphere mesh whose position is driven imperatively every frame,
  * mirroring `RobotPose.tsx`'s `useFrame` + `getState()` pattern exactly:
  * both this component and the pose driver resolve the SAME sample index
- * from the SAME `scrubFraction`, via the identical `Math.round` + clamp
- * derivation, so the marker and the arm can never disagree about where
- * along the path the scrub is (the plan's load-bearing must-have — a
- * mismatch here would imply a positional accuracy the arm is not actually
- * achieving).
+ * from the SAME `livePlayback.fraction`, via the identical `Math.round` +
+ * clamp derivation, so the marker and the arm can never disagree about
+ * where along the path the scrub/playback position is (the plan's
+ * load-bearing must-have — a mismatch here would imply a positional
+ * accuracy the arm is not actually achieving).
  *
- * Reads `trajectory`/`scrubFraction` via `useCellStore.getState()` inside
+ * Reads `trajectory`/`livePlayback` via `useCellStore.getState()` inside
  * `useFrame` rather than a reactive selector, for the same reason
- * `RobotPose.tsx` does: a scrub drag fires at animation-like rates, and a
- * reactive subscription here would force a React re-render of the scene
- * subtree on every tick (CLAUDE.md anti-pattern).
+ * `RobotPose.tsx` does: both a scrub drag and playback (Phase 4) fire at
+ * animation-like rates, and a reactive subscription here would force a
+ * React re-render of the scene subtree on every tick (CLAUDE.md
+ * anti-pattern). `livePlayback.fraction` is the non-reactive 60fps channel
+ * that stays in lockstep with the reactive `scrubFraction` on every manual
+ * drag and every throttled playback sync (see cellStore.ts).
  *
  * One indicator only — not a pair, and explicitly not a per-operation
  * marker (Phase 6's job). Visibility is toggled off (rather than the
@@ -45,21 +48,21 @@ export default function ScrubMarker() {
   // construction in `marker-scale.ts` (and asserted there), rather than by
   // two literals that happened to be ordered correctly.
   //
-  // This is a REACTIVE selector, unlike `trajectory`/`scrubFraction` below,
+  // This is a REACTIVE selector, unlike `trajectory`/`livePlayback` below,
   // which are deliberately read via `getState()` inside `useFrame` instead.
   // That asymmetry is legitimate, not an oversight: the parsed toolpath
   // (and therefore its bounds) changes at most once per sample selection —
   // exactly the coarse cadence `cellStore.ts`'s own header comment sanctions
-  // for reactive subscriptions — whereas the scrub fraction and the pose it
-  // drives change every animation frame and must keep going through
-  // `getState()` to avoid forcing a React re-render on every tick.
+  // for reactive subscriptions — whereas the scrub/playback fraction and
+  // the pose it drives change every animation frame and must keep going
+  // through `getState()` to avoid forcing a React re-render on every tick.
   const scrubMarkerRadius = useCellStore((state) => scrubMarkerRadiusFromBounds(state.toolpath?.bounds ?? null))
 
   useFrame(() => {
     const mesh = meshRef.current
     if (!mesh) return
 
-    const { trajectory, scrubFraction } = useCellStore.getState()
+    const { trajectory, livePlayback } = useCellStore.getState()
     if (!trajectory || trajectory.samples.length === 0) {
       mesh.visible = false
       return
@@ -69,7 +72,7 @@ export default function ScrubMarker() {
     // Identical index derivation to `RobotPose.tsx` — the load-bearing
     // detail that keeps the marker and the robot's pose agreeing on which
     // sample they are both reporting.
-    const rawIndex = Math.round(scrubFraction * (samples.length - 1))
+    const rawIndex = Math.round(livePlayback.fraction * (samples.length - 1))
     const index = Math.min(samples.length - 1, Math.max(0, rawIndex))
     const sample = samples[index]
 

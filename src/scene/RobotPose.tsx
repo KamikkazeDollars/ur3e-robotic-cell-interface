@@ -8,13 +8,18 @@ interface RobotPoseProps {
 }
 
 /**
- * Imperative, per-frame scrub-driven pose driver (D-05). Renders nothing.
+ * Imperative, per-frame scrub/playback-driven pose driver (D-05). Renders
+ * nothing.
  *
- * Reads `trajectory`/`scrubFraction` via `useCellStore.getState()` inside
- * `useFrame` rather than a reactive selector-function subscription: a
- * slider drag fires at animation-like rates, so a reactive subscription
- * here would re-render the scene subtree on every tick — the exact
- * anti-pattern CLAUDE.md and cellStore.ts's file header both forbid.
+ * Reads `trajectory`/`livePlayback` via `useCellStore.getState()` inside
+ * `useFrame` rather than a reactive selector-function subscription: both a
+ * slider drag and playback (Phase 4) fire at animation-like rates, so a
+ * reactive subscription here would re-render the scene subtree on every
+ * tick — the exact anti-pattern CLAUDE.md and cellStore.ts's file header
+ * both forbid. `livePlayback.fraction` is the non-reactive 60fps channel
+ * that stays in lockstep with the reactive `scrubFraction` on every manual
+ * drag and every throttled playback sync (see cellStore.ts), so reading it
+ * here is correct for both interaction modes.
  *
  * Zips `UR3E_JOINT_NAMES` against the chosen sample's `JointAngles` tuple
  * via `setJointValue`, exactly as `RobotModel.tsx` already does for the D-08
@@ -33,11 +38,11 @@ interface RobotPoseProps {
  */
 export default function RobotPose({ robot }: RobotPoseProps) {
   useFrame(() => {
-    const { trajectory, scrubFraction } = useCellStore.getState()
+    const { trajectory, livePlayback } = useCellStore.getState()
     if (!trajectory || trajectory.samples.length === 0) return
 
     const { samples } = trajectory
-    const rawIndex = Math.round(scrubFraction * (samples.length - 1))
+    const rawIndex = Math.round(livePlayback.fraction * (samples.length - 1))
     const index = Math.min(samples.length - 1, Math.max(0, rawIndex))
     const sample = samples[index]
 
