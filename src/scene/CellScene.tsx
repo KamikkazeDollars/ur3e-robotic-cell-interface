@@ -73,7 +73,19 @@ export default function CellScene() {
   // RailRig.tsx stays a pure presentational component and doesn't add a
   // second, more direct edge into the pre-existing
   // RailRig -> cellStore -> compile -> toolpath-anchor -> RailRig cycle.
-  const railPos = useCellStore((state) => state.trajectory?.railPos ?? RAIL_CENTER_X)
+  //
+  // CR-01 fix (04-REVIEW): `trajectory` goes `null` synchronously the
+  // instant a new selection is dispatched, before the async fetch/parse/
+  // compile resolves (cellStore.selectSample's unknown-id, parsing-entry,
+  // and failure branches). Falling back to the hardcoded `RAIL_CENTER_X`
+  // constant during that window made the carriage visibly snap through the
+  // rail's midpoint on every reselection — most visibly on a mode switch,
+  // since `railStartXForMode` deliberately parks each mode off-centre.
+  // `lastRailPos` tracks the last successfully-compiled trajectory's rail
+  // position (never reset by the null-out branches), so the fallback always
+  // reflects the carriage's true last on-screen position instead of an
+  // arbitrary constant.
+  const railPos = useCellStore((state) => state.trajectory?.railPos ?? state.lastRailPos)
 
   return (
     // `position: fixed` + `inset: 0` sizes this wrapper directly against the

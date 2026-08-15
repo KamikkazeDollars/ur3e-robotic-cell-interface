@@ -3,6 +3,7 @@ import { GCODE_SAMPLES } from '../gcode/samples'
 import { parseToolpath, type ParsedToolpath } from '../gcode/parseToolpath'
 import { toolpathAnchorForMode } from '../gcode/toolpath-anchor'
 import { compileTrajectory, type CompiledTrajectory } from '../trajectory/compile'
+import { RAIL_CENTER_X } from '../kinematics'
 import { useUiShellStore } from './uiShellStore'
 
 /**
@@ -96,6 +97,21 @@ interface CellState {
    * the same stale-request guard `toolpath` itself is set under, so a
    * superseded compile can never reach the store. */
   trajectory: CompiledTrajectory | null
+  /** The rail position of the last successfully-compiled trajectory (04-REVIEW
+   * CR-01). Defaults to `RAIL_CENTER_X` and is updated ONLY alongside
+   * `trajectory` in `selectSample`'s success branch — the null-out branches
+   * (unknown id, entering 'parsing', fetch/compile failure) deliberately
+   * leave it untouched. `trajectory` itself goes `null` synchronously the
+   * moment a new selection is dispatched, before the async fetch/parse/
+   * compile resolves; without a separate "last known good" field,
+   * `CellScene.tsx`'s rail-position selector had nothing to fall back to but
+   * the hardcoded rail midpoint, so every reselection (including every mode
+   * switch, which intentionally parks the carriage off-centre) made the
+   * carriage visibly snap through `RAIL_CENTER_X` before settling on the new
+   * trajectory's real position. This field only ever moves forward to a real
+   * solve, never resets, so the fallback always reads the carriage's true
+   * last on-screen position instead of an arbitrary constant. */
+  lastRailPos: number
   /** The `SelectSampleOrigin` of the most recently DISPATCHED `selectSample`
    * call, written on every branch (unknown-id, parsing-entry, success,
    * failure) alongside that branch's other fields — the same
@@ -170,6 +186,7 @@ export const useCellStore = create<CellState>((set, get) => ({
   toolpathLoadStatus: 'idle',
   toolpath: null,
   trajectory: null,
+  lastRailPos: RAIL_CENTER_X,
   lastSelectSampleOrigin: 'manual',
   scrubFraction: 0,
   setScrubFraction: (fraction) => {
@@ -261,6 +278,10 @@ export const useCellStore = create<CellState>((set, get) => ({
         toolpath,
         toolpathLoadStatus: 'ready',
         trajectory,
+        // 04-REVIEW CR-01: the only branch that ever writes lastRailPos —
+        // it must move forward exactly alongside a successful trajectory
+        // compile and never reset in the null-out branches below.
+        lastRailPos: trajectory.railPos,
         scrubFraction: 0,
         isPlaying: false,
         lastSelectSampleOrigin: origin,
