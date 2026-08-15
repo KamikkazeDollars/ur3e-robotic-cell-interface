@@ -32,7 +32,17 @@ function PlaybackClock() {
 /**
  * R3F Canvas composition root — the phase's "one real route" analogue.
  *
- * Composition order (per PATTERNS.md's definitive ordering):
+ * Composition order (per PATTERNS.md's definitive ordering, revised by gap
+ * closure G-04-1's frame-order correction):
+ *   PlaybackClock (plan 04-01, moved here by plan 04-04's frame-order
+ *      correction) FIRST, immediately after PerspectiveCamera and ahead of
+ *      every per-frame consumer of `livePlayback.fraction` — it WRITES that
+ *      channel inside its own `useFrame`, and R3F runs frame callbacks in
+ *      subscription order, which follows mount order. Mounting the writer
+ *      first is what guarantees every reader (RobotPose inside RailRig,
+ *      PlaybackTrail, ScrubMarker) observes the CURRENT frame's fraction
+ *      rather than the previous frame's stale value. Renders nothing —
+ *      exists purely to run usePlaybackClock's useFrame side effect. ->
  *   lights (ambient + directional) -> floor plane -> rail/robot mount point
  *   -> Workbench (plan 02-04, scene furniture the toolpath visually rests
  *      on — mounted between the rig and the toolpath) -> Toolpath (plan
@@ -42,14 +52,20 @@ function PlaybackClock() {
  *      that same drawn line, before ScrubMarker) -> ScrubMarker (plan
  *      03-03, D-07 current-scrub-position indicator — mounted immediately
  *      after PlaybackTrail since it rides the same drawn line, still
- *      before OrbitControls) -> PlaybackClock (plan 04-01, renders
- *      nothing, exists to run usePlaybackClock's useFrame side effect —
- *      mounted immediately after ScrubMarker, the same "renders nothing"
- *      tier, still before OrbitControls) -> OrbitControls (makeDefault) ->
- *      NavCube -> CameraResetListener
+ *      before OrbitControls) -> OrbitControls (makeDefault) -> NavCube ->
+ *      CameraResetListener
  *   -> ToolpathCameraFit (plan 02-03, mounted after CameraResetListener —
  *      D-05's toolpath fit is a distinct behaviour from the Reset View
  *      default framing the listener restores)
+ *
+ * Do NOT "fix" a future re-ordering regression with `useFrame`'s
+ * render-priority argument instead of mount order: a non-zero priority
+ * switches R3F out of automatic rendering and requires the app to drive
+ * `gl.render` by hand — a far larger change than mount order, and one that
+ * would silently blank the canvas if any consumer forgot it.
+ * `cell-scene-order.test.ts` is the structural guard against this
+ * regression, since a stale-frame read is invisible in every other
+ * automated check.
  */
 export default function CellScene() {
   // WR-03 review follow-up: read here (CellScene already imports both
@@ -72,6 +88,15 @@ export default function CellScene() {
         style={{ width: '100%', height: '100%', display: 'block' }}
       >
         <PerspectiveCamera makeDefault position={DEFAULT_CAMERA_POSITION} fov={45} />
+
+        {/* Gap closure G-04-1 frame-order correction (plan 04-04): mounted
+            FIRST among frame-callback consumers so usePlaybackClock's
+            useFrame write to livePlayback.fraction runs before RobotPose
+            (inside RailRig), PlaybackTrail, and ScrubMarker read it —
+            otherwise each of those would read the PREVIOUS frame's value
+            (R3F runs useFrame callbacks in mount/subscription order). See
+            this component's top-level doc comment for the full rationale. */}
+        <PlaybackClock />
 
         {/* Neutral studio lighting — soft ambient + a single directional key light (D-06) */}
         <ambientLight intensity={0.6} />
@@ -124,10 +149,6 @@ export default function CellScene() {
             the toolpath above, driven from the same trajectory sample index
             that poses the robot (SIM-05). */}
         <ScrubMarker />
-
-        {/* Plan 04-01: runs usePlaybackClock's useFrame side effect —
-            renders nothing, drives livePlayback.fraction/scrubFraction. */}
-        <PlaybackClock />
 
         <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />
