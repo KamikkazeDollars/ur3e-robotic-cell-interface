@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { useCellStore } from './cellStore'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from '../scene/camera-defaults'
 
@@ -98,6 +98,73 @@ describe('useCellStore — setScrubFraction', () => {
     useCellStore.getState().setScrubFraction(0.7)
     useCellStore.getState().setScrubFraction(-Infinity)
     expect(useCellStore.getState().scrubFraction).toBe(0)
+  })
+})
+
+describe('useCellStore — playback', () => {
+  beforeEach(() => {
+    useCellStore.setState({ isPlaying: false, scrubFraction: 0, livePlayback: { fraction: 0 } })
+  })
+
+  it('isPlaying starts false', () => {
+    expect(useCellStore.getState().isPlaying).toBe(false)
+  })
+
+  it('play() sets isPlaying true and pause() sets it back to false', () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().isPlaying).toBe(true)
+    useCellStore.getState().pause()
+    expect(useCellStore.getState().isPlaying).toBe(false)
+  })
+
+  it('livePlayback.fraction starts at 0', () => {
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+
+  it('setScrubFraction(0.42) writes 0.42 into both scrubFraction and livePlayback.fraction', () => {
+    useCellStore.getState().setScrubFraction(0.42)
+    expect(useCellStore.getState().scrubFraction).toBe(0.42)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0.42)
+  })
+
+  it('setScrubFraction(NaN) leaves both channels at 0', () => {
+    useCellStore.getState().setScrubFraction(NaN)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+
+  it('setScrubFraction(Infinity) leaves both channels at 0', () => {
+    useCellStore.getState().setScrubFraction(Infinity)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+
+  it('setScrubFraction(-1) clamps both channels to 0', () => {
+    useCellStore.getState().setScrubFraction(-1)
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+
+  it('setScrubFraction(2) clamps both channels to 1', () => {
+    useCellStore.getState().setScrubFraction(2)
+    expect(useCellStore.getState().scrubFraction).toBe(1)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(1)
+  })
+
+  it('livePlayback object identity is unchanged across play(), pause(), and setScrubFraction() calls', () => {
+    const before = useCellStore.getState().livePlayback
+    useCellStore.getState().play()
+    expect(useCellStore.getState().livePlayback).toBe(before)
+    useCellStore.getState().pause()
+    expect(useCellStore.getState().livePlayback).toBe(before)
+    useCellStore.getState().setScrubFraction(0.7)
+    expect(useCellStore.getState().livePlayback).toBe(before)
+  })
+
+  it('Pitfall 4 guard: play() then setScrubFraction(0.5) leaves isPlaying true (the clock cannot pause itself)', () => {
+    useCellStore.getState().play()
+    useCellStore.getState().setScrubFraction(0.5)
+    expect(useCellStore.getState().isPlaying).toBe(true)
   })
 })
 
