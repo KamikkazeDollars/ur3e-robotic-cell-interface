@@ -1,12 +1,23 @@
 import { useMemo } from 'react'
+import { DoubleSide } from 'three'
 import { Line } from '@react-three/drei'
 import { useCellStore } from '../store/cellStore'
 import { toRenderBuckets } from '../gcode/parseToolpath'
+import { WORKBENCH_TOP_Y } from '../gcode/toolpath-anchor'
+import {
+  markerRadiusFromBounds,
+  guideStemRadius,
+  guideFootprintRadius,
+  GUIDE_FOOTPRINT_LIFT,
+} from './marker-scale'
 
 // D-03: muted gray for rapid (G0) moves, warm orange for cutting (G1/G2/G3)
-// moves — both read clearly against the Dominant (#FAFAFA) background and
-// the Secondary (#E4E7EB) floor, and stay clear of the Accent blue
-// (#2563EB), which is reserved for the nav cube and the Reset View CTA.
+// moves. Both tones are chosen to read against the current dark canvas
+// (`SCENE_PALETTE.background`) and the workbench surface these markers and
+// guides are drawn on (`SCENE_PALETTE.workbench`) — the readability of both
+// against the bench is asserted in `marker-scale.test.ts`'s
+// `MIN_MARKER_CONTRAST` gate, so this comment points at that gate rather
+// than restating the property in prose.
 export const RAPID_COLOR = '#9CA3AF'
 export const CUTTING_COLOR = '#EA580C'
 
@@ -17,11 +28,64 @@ export const CUTTING_COLOR = '#EA580C'
 const RAPID_LINE_WIDTH = 4
 const CUTTING_LINE_WIDTH = 6
 
-// G-02-03: overall start/end marker sphere radius (metres) — sized well
-// above either line's on-screen width at this toolpath's scale (bundled
-// samples span roughly 0.13-0.15m per side) so each marker reads as a
-// clearly visible bullet point, not a speck.
-const MARKER_RADIUS = 0.012
+/**
+ * One start/end anchor: a marker sphere, a vertical guide stem running down
+ * to the workbench surface, and a flat footprint pad on the tabletop
+ * directly beneath it (G-03-4 gap closure). Bundled as one component so the
+ * three pieces of a single anchor can never drift apart or be rendered
+ * inconsistently between the start and end markers.
+ *
+ * `liftedPoint` is already raised by `radius` on Y (see `liftMarker` below)
+ * so the marker's BOTTOM, not its centre, rests at the toolpath point —
+ * which is also what guarantees the stem's height (liftedPoint.y minus
+ * `WORKBENCH_TOP_Y`) is always positive: a marker sits at least its own
+ * radius above the tabletop even at the toolpath's lowest point.
+ */
+function AnchoredMarker({
+  point,
+  liftedPoint,
+  radius,
+}: {
+  point: readonly [number, number, number]
+  liftedPoint: readonly [number, number, number]
+  radius: number
+}) {
+  const stemRadius = guideStemRadius(radius)
+  const footprintRadius = guideFootprintRadius(radius)
+  const stemHeight = liftedPoint[1] - WORKBENCH_TOP_Y
+  const stemCenterY = (WORKBENCH_TOP_Y + liftedPoint[1]) / 2
+
+  return (
+    <>
+      <mesh position={liftedPoint}>
+        <sphereGeometry args={[radius, 16, 16]} />
+        <meshStandardMaterial color={CUTTING_COLOR} />
+      </mesh>
+      {/* Guard the stem's height: skip a degenerate zero-or-negative-height
+          cylinder (should not occur given the lift invariant above, but a
+          geometry constructor must never receive a non-positive dimension)
+          and render the footprint pad alone instead. */}
+      {stemHeight > 0 && (
+        <mesh position={[point[0], stemCenterY, point[2]]}>
+          <cylinderGeometry args={[stemRadius, stemRadius, stemHeight, 12]} />
+          <meshStandardMaterial color={CUTTING_COLOR} />
+        </mesh>
+      )}
+      {/* Flat tabletop footprint pad — unlit (`meshBasicMaterial`) so it
+          reads as a crisp target pad at any lighting angle rather than
+          dimming as the key light rakes across it, and double-sided so it
+          stays visible when the camera orbits below the tabletop, matching
+          `CellScene.tsx`'s floor-plane treatment. */}
+      <mesh
+        position={[point[0], WORKBENCH_TOP_Y + GUIDE_FOOTPRINT_LIFT, point[2]]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <circleGeometry args={[footprintRadius, 24]} />
+        <meshBasicMaterial color={CUTTING_COLOR} side={DoubleSide} />
+      </mesh>
+    </>
+  )
+}
 
 /**
  * Mounts the classified toolpath as exactly two batched drei Line draw
@@ -37,6 +101,12 @@ const MARKER_RADIUS = 0.012
  *
  * Points arrive already anchored in world space (D-06, `parseToolpath.ts`),
  * so this component applies no group transform of its own.
+ *
+ * Note on the `toolpath-anchor` import: `toolpath-anchor.ts` imports from
+ * `RailRig.tsx`, and this file is imported only by `CellScene.tsx` — adding
+ * this edge introduces no module cycle (unlike the direct store read from
+ * `RailRig` that WR-03 removed). The dependency is acyclic and direct, so it
+ * is imported here rather than threaded through as a prop.
  */
 export default function Toolpath() {
   const toolpath = useCellStore((state) => state.toolpath)
@@ -61,6 +131,14 @@ export default function Toolpath() {
     }
   }, [toolpath])
 
+  // G-03-4: marker radius scales with the toolpath's own extent instead of
+  // a hardcoded absolute value. Derived before the early return below, same
+  // hook-order-stability rationale as `endpoints` above.
+  const markerRadius = useMemo(
+    () => markerRadiusFromBounds(toolpath?.bounds ?? null),
+    [toolpath],
+  )
+
   if (!buckets) return null
 
   const { rapidPoints, cuttingPoints } = buckets
@@ -73,10 +151,11 @@ export default function Toolpath() {
   // Lifting the marker by its own radius keeps its BOTTOM at the point
   // instead of its centre, so it always rests visibly on top of the
   // workbench, regardless of which specific point ends up being the
-  // start/end for a given sample.
+  // start/end for a given sample. This is also what makes the guide stem's
+  // height (see `AnchoredMarker`) always positive.
   const liftMarker = (point: readonly [number, number, number]): [number, number, number] => [
     point[0],
-    point[1] + MARKER_RADIUS,
+    point[1] + markerRadius,
     point[2],
   ]
 
@@ -98,14 +177,16 @@ export default function Toolpath() {
       )}
       {endpoints && (
         <>
-          <mesh position={liftMarker(endpoints.start)}>
-            <sphereGeometry args={[MARKER_RADIUS, 16, 16]} />
-            <meshStandardMaterial color={CUTTING_COLOR} />
-          </mesh>
-          <mesh position={liftMarker(endpoints.end)}>
-            <sphereGeometry args={[MARKER_RADIUS, 16, 16]} />
-            <meshStandardMaterial color={CUTTING_COLOR} />
-          </mesh>
+          <AnchoredMarker
+            point={endpoints.start}
+            liftedPoint={liftMarker(endpoints.start)}
+            radius={markerRadius}
+          />
+          <AnchoredMarker
+            point={endpoints.end}
+            liftedPoint={liftMarker(endpoints.end)}
+            radius={markerRadius}
+          />
         </>
       )}
     </>

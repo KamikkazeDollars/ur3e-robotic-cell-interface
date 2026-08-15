@@ -2,20 +2,16 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { Mesh } from 'three'
 import { useCellStore } from '../store/cellStore'
+import { scrubMarkerRadiusFromBounds } from './marker-scale'
 
 // D-07: a deep teal, chosen so the current-scrub-position indicator is
 // unmistakably distinct from every colour already claimed elsewhere in the
-// scene — never `Toolpath.tsx`'s `RAPID_COLOR` (#9CA3AF muted gray) or
-// `CUTTING_COLOR` (#EA580C warm orange, also the start/end marker tone),
-// and never the UI-SPEC Accent blue (#2563EB) reserved exclusively for the
-// nav cube and the Reset View button. Reads clearly against both the
-// Dominant (#FAFAFA) background and the Secondary (#E4E7EB) floor/workbench.
+// scene — never `Toolpath.tsx`'s `RAPID_COLOR` (muted gray) or
+// `CUTTING_COLOR` (warm orange, also the start/end marker tone), and never
+// the app's accent red (`SCENE_PALETTE.navCubeHover`) reserved for the nav
+// cube and active-tab indicator. This is a checkpoint-approved decision
+// (D-07), not part of any reported gap — its tone is unchanged by G-03-4.
 const SCRUB_MARKER_COLOR = '#0F766E'
-
-// Meaningfully larger than `Toolpath.tsx`'s MARKER_RADIUS (0.012) so this
-// single current-position indicator reads as the PRIMARY marker on the
-// toolpath, not a third instance of the same start/end bullet size.
-const SCRUB_MARKER_RADIUS = 0.02
 
 /**
  * D-07 current-scrub-position indicator (SIM-05). Renders nothing reactive —
@@ -42,6 +38,23 @@ const SCRUB_MARKER_RADIUS = 0.02
 export default function ScrubMarker() {
   const meshRef = useRef<Mesh>(null)
 
+  // G-03-4: radius derived from the same `ParsedToolpath.bounds` that sizes
+  // the endpoint markers (`Toolpath.tsx`), scaled above them by
+  // `SCRUB_MARKER_SCALE` inside `scrubMarkerRadiusFromBounds` — the size
+  // hierarchy against the endpoint markers is now guaranteed by
+  // construction in `marker-scale.ts` (and asserted there), rather than by
+  // two literals that happened to be ordered correctly.
+  //
+  // This is a REACTIVE selector, unlike `trajectory`/`scrubFraction` below,
+  // which are deliberately read via `getState()` inside `useFrame` instead.
+  // That asymmetry is legitimate, not an oversight: the parsed toolpath
+  // (and therefore its bounds) changes at most once per sample selection —
+  // exactly the coarse cadence `cellStore.ts`'s own header comment sanctions
+  // for reactive subscriptions — whereas the scrub fraction and the pose it
+  // drives change every animation frame and must keep going through
+  // `getState()` to avoid forcing a React re-render on every tick.
+  const scrubMarkerRadius = useCellStore((state) => scrubMarkerRadiusFromBounds(state.toolpath?.bounds ?? null))
+
   useFrame(() => {
     const mesh = meshRef.current
     if (!mesh) return
@@ -66,13 +79,13 @@ export default function ScrubMarker() {
     // visibly clipped by it. Lifting keeps the sphere's BOTTOM at the
     // sample's point instead of its centre, so it always rests visibly on
     // top of whatever surface that point happens to sit on.
-    mesh.position.set(sample.point[0], sample.point[1] + SCRUB_MARKER_RADIUS, sample.point[2])
+    mesh.position.set(sample.point[0], sample.point[1] + scrubMarkerRadius, sample.point[2])
     mesh.visible = true
   })
 
   return (
     <mesh ref={meshRef} visible={false}>
-      <sphereGeometry args={[SCRUB_MARKER_RADIUS, 16, 16]} />
+      <sphereGeometry args={[scrubMarkerRadius, 16, 16]} />
       <meshStandardMaterial color={SCRUB_MARKER_COLOR} />
     </mesh>
   )
