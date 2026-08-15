@@ -57,6 +57,16 @@
   --ui-accent-fg: #ffffff; /* text on accent fill */
   --ui-destructive: #f97066; /* kept distinct from --ui-accent; unused this plan */
 
+  /* 3D cell structural surface tones (gap closure G-03-6). Declared here so
+     the scene's TypeScript palette (src/scene/scene-palette.ts) mirrors real
+     tokens rather than free-floating literals, and covered by an automated
+     test that fails if either side is edited alone. Each is a deliberate
+     lightness step apart — darkest to lightest — so no two cell surfaces can
+     ever read as the same tone. */
+  --ui-scene-floor: #26292e; /* floor/layout plane — darkest, recedes under everything */
+  --ui-scene-bench: #4d5460; /* workbench slab and legs — mid tone, kept neutral so the toolpath drawn on it stays readable */
+  --ui-scene-rail: #7a828c; /* rail profiles, end-stops and carriage — lightest, reads as machined steel hardware */
+
   /* Shell geometry — read by both the shell's own fixed layout (TabRail,
      TabPanel, ModeBar) and App.tsx's pre-existing overlay offset, so the
      two can never drift apart. */
