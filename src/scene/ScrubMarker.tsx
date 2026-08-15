@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import type { Mesh } from 'three'
 import { useCellStore } from '../store/cellStore'
 import { scrubMarkerRadiusFromBounds } from './marker-scale'
+import { sampleAtFraction } from '../trajectory/sample-lookup'
 
 // D-07: a deep teal, chosen so the current-scrub-position indicator is
 // unmistakably distinct from every colour already claimed elsewhere in the
@@ -17,12 +18,17 @@ const SCRUB_MARKER_COLOR = '#0F766E'
  * D-07 current-scrub-position indicator (SIM-05). Renders nothing reactive —
  * a single sphere mesh whose position is driven imperatively every frame,
  * mirroring `RobotPose.tsx`'s `useFrame` + `getState()` pattern exactly:
- * both this component and the pose driver resolve the SAME sample index
- * from the SAME `livePlayback.fraction`, via the identical `Math.round` +
- * clamp derivation, so the marker and the arm can never disagree about
- * where along the path the scrub/playback position is (the plan's
- * load-bearing must-have — a mismatch here would imply a positional
- * accuracy the arm is not actually achieving).
+ * both this component and the pose driver call the SAME `sampleAtFraction`
+ * export on the SAME `livePlayback.fraction` store field (04-03), so the
+ * marker and the arm can never disagree about where along the path the
+ * scrub/playback position is (the plan's load-bearing must-have — a
+ * mismatch here would imply a positional accuracy the arm is not actually
+ * achieving). This is a STRONGER guarantee than the two verbatim, hand-kept-
+ * in-sync index derivations it replaces: Phase 3 deliberately chose that
+ * duplication so the two could never silently drift apart (see cellStore.ts
+ * decision log); this change reverses that choice on purpose, because one
+ * shared function enforces the same invariant more strongly than two copies
+ * that merely happen to agree today.
  *
  * Reads `trajectory`/`livePlayback` via `useCellStore.getState()` inside
  * `useFrame` rather than a reactive selector, for the same reason
@@ -68,13 +74,14 @@ export default function ScrubMarker() {
       return
     }
 
-    const { samples } = trajectory
-    // Identical index derivation to `RobotPose.tsx` — the load-bearing
-    // detail that keeps the marker and the robot's pose agreeing on which
-    // sample they are both reporting.
-    const rawIndex = Math.round(livePlayback.fraction * (samples.length - 1))
-    const index = Math.min(samples.length - 1, Math.max(0, rawIndex))
-    const sample = samples[index]
+    // Same shared lookup call `RobotPose.tsx` makes — the load-bearing
+    // detail that keeps the marker and the robot's pose agreeing on where
+    // along the path they are both reporting.
+    const sample = sampleAtFraction(trajectory, livePlayback.fraction)
+    if (!sample) {
+      mesh.visible = false
+      return
+    }
 
     // Lifted by the marker's own radius on the vertical axis, mirroring
     // `Toolpath.tsx`'s `liftMarker` rationale: a sphere centred exactly on
