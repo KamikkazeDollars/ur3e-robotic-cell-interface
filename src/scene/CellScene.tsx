@@ -7,6 +7,7 @@ import ToolpathCameraFit from './ToolpathCameraFit'
 import RailRig, { RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH, RIG_Z_OFFSET, FLOOR_Z_CENTER } from './RailRig'
 import Workbench from './Workbench'
 import Toolpath from './Toolpath'
+import PlaybackTrail from './PlaybackTrail'
 import ScrubMarker from './ScrubMarker'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
@@ -36,13 +37,16 @@ function PlaybackClock() {
  *   -> Workbench (plan 02-04, scene furniture the toolpath visually rests
  *      on — mounted between the rig and the toolpath) -> Toolpath (plan
  *      02-01, mounted after the workbench, before OrbitControls) ->
- *      ScrubMarker (plan 03-03, D-07 current-scrub-position indicator —
- *      mounted immediately after Toolpath since it rides that same drawn
- *      line, still before OrbitControls) -> PlaybackClock (plan 04-01,
- *      renders nothing, exists to run usePlaybackClock's useFrame side
- *      effect — mounted immediately after ScrubMarker, the same
- *      "renders nothing" tier, still before OrbitControls) ->
- *      OrbitControls (makeDefault) -> NavCube -> CameraResetListener
+ *      PlaybackTrail (plan 04-04, gap closure G-04-1: the traversed-path
+ *      highlight — mounted immediately after Toolpath since it overlays
+ *      that same drawn line, before ScrubMarker) -> ScrubMarker (plan
+ *      03-03, D-07 current-scrub-position indicator — mounted immediately
+ *      after PlaybackTrail since it rides the same drawn line, still
+ *      before OrbitControls) -> PlaybackClock (plan 04-01, renders
+ *      nothing, exists to run usePlaybackClock's useFrame side effect —
+ *      mounted immediately after ScrubMarker, the same "renders nothing"
+ *      tier, still before OrbitControls) -> OrbitControls (makeDefault) ->
+ *      NavCube -> CameraResetListener
  *   -> ToolpathCameraFit (plan 02-03, mounted after CameraResetListener —
  *      D-05's toolpath fit is a distinct behaviour from the Reset View
  *      default framing the listener restores)
@@ -109,6 +113,12 @@ export default function CellScene() {
             toolpath for whichever bundled sample is selected. Points arrive
             already in world space, so no wrapping group/transform here. */}
         <Toolpath />
+
+        {/* Gap closure G-04-1 (plan 04-04): the traversed-path highlight —
+            grows over the drawn toolpath as playback advances, driven
+            imperatively per frame from the same livePlayback.fraction
+            channel that poses the robot and drives the scrub marker below. */}
+        <PlaybackTrail />
 
         {/* D-07 (plan 03-03): the current-scrub-position indicator riding
             the toolpath above, driven from the same trajectory sample index
