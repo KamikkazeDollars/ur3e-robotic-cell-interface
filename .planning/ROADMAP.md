@@ -129,12 +129,12 @@ Plans:
   1. User can press play and watch the UR3e animate continuously along the full toolpath in real time, synced to the visible trajectory line
   2. During playback, the trajectory highlight and TCP marker track the robot's current position smoothly, driven by an imperative render loop rather than per-frame React state updates
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Tracer: Play/Pause control drives a dual-cadence animation clock end-to-end, plus D-04 pause-on-drag
+- [x] 04-01-PLAN.md — Tracer: Play/Pause control drives a dual-cadence animation clock end-to-end, plus D-04 pause-on-drag
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
 | 2. G-code Import + Static Toolpath | 5/5 | Complete    | 2026-08-14 |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 3/3 | In Progress|  |
-| 4. Playback Engine | 0/? | Not started | - |
+| 4. Playback Engine | 1/3 | In Progress|  |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
 | 6. Operations Tree + Mill Engagement Coloring | 0/? | Not started | - |
 | 7. Tool-Changer + Print/Mill Tabs | 0/? | Not started | - |
