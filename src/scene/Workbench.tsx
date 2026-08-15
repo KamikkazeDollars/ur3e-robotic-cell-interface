@@ -2,7 +2,9 @@ import {
   CARRIAGE_FRONT_FACE_Z,
   TOOLPATH_ANCHOR_OFFSET,
   WORKBENCH_TOP_Y,
+  toolpathAnchorForMode,
 } from '../gcode/toolpath-anchor'
+import { useUiShellStore } from '../store/uiShellStore'
 import { SCENE_PALETTE } from './scene-palette'
 
 // The bench is a deliberately distinct mid tone (SCENE_PALETTE.workbench),
@@ -56,12 +58,27 @@ const LEG_Z_POSITIONS = [TABLETOP_NEAR_Z + LEG_INSET, TABLETOP_FAR_Z - LEG_INSET
  * (`CARRIAGE_FRONT_FACE_Z`, `TOOLPATH_ANCHOR_OFFSET`, `WORKBENCH_TOP_Y`) —
  * this component never restates the toolpath's anchor position or the
  * carriage's front face as a second, independently guessed literal.
+ *
+ * G-04-1 gap closure (04-06-PLAN.md): the bench now travels with the cell's
+ * configured station. It subscribes to `cellMode` (the same single-field
+ * `useUiShellStore` selector form `ModeBar.tsx` uses) and derives its X from
+ * `toolpathAnchorForMode(cellMode).x`, computed once at the top of the
+ * component and reused for both the tabletop and the leg map so the two can
+ * never disagree. A reactive subscription is correct here for the same
+ * reason `cellStore.ts`'s header sanctions one for `selectSample`: the mode
+ * changes at human interaction cadence, never per frame. Every other
+ * dimension — the Z span, the heights, the widths and leg insets — is
+ * unchanged, because the mode moves the station along the rail and nothing
+ * else.
  */
 export default function Workbench() {
+  const cellMode = useUiShellStore((state) => state.cellMode)
+  const anchor = toolpathAnchorForMode(cellMode)
+
   return (
     <group>
       <mesh
-        position={[TOOLPATH_ANCHOR_OFFSET.x, TABLETOP_CENTER_Y, TABLETOP_CENTER_Z]}
+        position={[anchor.x, TABLETOP_CENTER_Y, TABLETOP_CENTER_Z]}
         receiveShadow
         castShadow
       >
@@ -73,7 +90,7 @@ export default function Workbench() {
         LEG_Z_POSITIONS.map((z) => (
           <mesh
             key={`${xOffset}-${z}`}
-            position={[TOOLPATH_ANCHOR_OFFSET.x + xOffset, LEG_CENTER_Y, z]}
+            position={[anchor.x + xOffset, LEG_CENTER_Y, z]}
             castShadow
           >
             <boxGeometry args={[LEG_SECTION, LEG_HEIGHT, LEG_SECTION]} />

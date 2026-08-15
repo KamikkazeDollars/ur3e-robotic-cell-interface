@@ -325,3 +325,66 @@ describe('useCellStore — selectSample resets scrub position on every branch (0
     expect(useCellStore.getState().livePlayback.fraction).toBe(0)
   })
 })
+
+describe('useCellStore — selectSample origin (G-04-1 checkpoint follow-up)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('defaults lastSelectSampleOrigin to "manual" in the store\'s initial state', () => {
+    // Explicit, rather than relying on whatever an earlier test in this file
+    // last left it at — this test only asserts the field's documented
+    // default value, matching the `resetToken`/`robotLoadStatus` tests above.
+    useCellStore.setState({ lastSelectSampleOrigin: 'manual' })
+    expect(useCellStore.getState().lastSelectSampleOrigin).toBe('manual')
+  })
+
+  it('a call with no origin argument — SampleSelect.tsx\'s manual dropdown pick — resolves with lastSelectSampleOrigin "manual"', async () => {
+    const printGcode = 'G1 X10 Y0 Z0 F100\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+    // Seed the opposite value first so a passing assertion below proves the
+    // call actually wrote 'manual' rather than merely finding it already set.
+    useCellStore.setState({ lastSelectSampleOrigin: 'mode-sync' })
+
+    await useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().lastSelectSampleOrigin).toBe('manual')
+  })
+
+  it('a call with origin "mode-sync" — useCellModeSampleSync.ts\'s auto-reselection — resolves with lastSelectSampleOrigin "mode-sync"', async () => {
+    const millGcode = 'G1 X20 Y0 Z0 F200\nG1 X20 Y20 Z0\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(millGcode) } as Response),
+      ),
+    )
+    useCellStore.setState({ lastSelectSampleOrigin: 'manual' })
+
+    await useCellStore.getState().selectSample('mill', 'mode-sync')
+
+    expect(useCellStore.getState().lastSelectSampleOrigin).toBe('mode-sync')
+  })
+
+  it('an unknown sampleId still records the dispatching call\'s origin, not the previous selection\'s', async () => {
+    useCellStore.setState({ lastSelectSampleOrigin: 'manual' })
+    await useCellStore.getState().selectSample('does-not-exist', 'mode-sync')
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('error')
+    expect(useCellStore.getState().lastSelectSampleOrigin).toBe('mode-sync')
+  })
+
+  it('a fetch/parse failure still records the dispatching call\'s origin', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network error'))))
+    useCellStore.setState({ lastSelectSampleOrigin: 'manual' })
+
+    await useCellStore.getState().selectSample('print', 'mode-sync')
+
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('error')
+    expect(useCellStore.getState().lastSelectSampleOrigin).toBe('mode-sync')
+  })
+})

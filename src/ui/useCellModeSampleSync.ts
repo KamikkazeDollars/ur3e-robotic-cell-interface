@@ -24,6 +24,14 @@ import { sampleMatchesMode, firstSampleIdForMode } from '../gcode/samples'
  * comment), so dispatching it from a mode switch mid-playback cannot leave a
  * stale position animating against a fresh trajectory — no extra guard is
  * needed here for that case.
+ *
+ * G-04-1 checkpoint follow-up (plan 04-06 continuation): this dispatch
+ * passes `'mode-sync'` as `selectSample`'s `origin` argument, explicitly —
+ * `cellStore`'s own header comment on `SelectSampleOrigin` explains why:
+ * without it, this auto-reselection would flip `toolpathLoadStatus` to
+ * 'ready' exactly like a manual dropdown pick does, re-triggering
+ * `ToolpathCameraFit.tsx`'s tight D-05 auto-frame and fighting the wide
+ * "see the whole rail sweep" framing a mode switch should produce instead.
  */
 export default function useCellModeSampleSync(): void {
   const cellMode = useUiShellStore((state) => state.cellMode)
@@ -45,6 +53,6 @@ export default function useCellModeSampleSync(): void {
 
     const nextSampleId = firstSampleIdForMode(cellMode)
     if (nextSampleId === null) return
-    void selectSample(nextSampleId)
+    void selectSample(nextSampleId, 'mode-sync')
   }, [cellMode])
 }

@@ -3,15 +3,30 @@ import { DEFAULT_TAB_ID, type TabId } from '../ui/tabs/tab-registry'
 import type { CellMode } from '../cell-mode'
 
 /** Which mode the cell is set to — drives the ModeBar segmented control and
- * the mounted-tool chip only. This is the Phase 7 surface (TOOL-01/TOOL-02):
- * visual-only this pass, and must not be read by anything under
- * `src/scene/`, `src/trajectory/` or `src/kinematics/` — Phase 7 owns the
- * real tool-changer swap.
+ * the mounted-tool chip.
  *
- * The union itself now lives in `src/cell-mode.ts` (G-04-1 gap closure):
- * `src/gcode/samples.ts` also needs it to tag bundled samples with a mode,
- * and a dependency-free module lets it reach the type without importing
- * this store. Re-exported here so the existing
+ * Boundary revision (G-04-1 gap closure, 04-06-PLAN.md): `cellMode` is now a
+ * real cell-configuration input, not visual-only chrome. It selects which
+ * bundled jobs the sample picker offers (`src/gcode/samples.ts`, plan
+ * 04-05's `samplesForMode`), and which station along the rail the loaded
+ * job and the workbench sit at (`toolpathAnchorForMode`, consumed by
+ * `cellStore.ts`'s `selectSample` and `src/scene/Workbench.tsx`). This is a
+ * deliberate reversal of this field's original rule ("must not be read by
+ * anything under `src/scene/`, `src/trajectory/` or `src/kinematics/`"),
+ * recorded here as a conscious decision driven by the G-04-1 UAT report,
+ * not an unexplained erosion of the boundary.
+ *
+ * What has NOT changed: Phase 7 still owns the actual tool-changer swap and
+ * the mounted-tool geometry (TOOL-01/TOOL-02 remain future work), and no
+ * per-frame value is ever written to this store — `cellMode` still only
+ * changes at human interaction cadence (a mode-bar click), read via
+ * `getState()` at selection time by non-React code or via a normal reactive
+ * selector by components, exactly like every other field here.
+ *
+ * The union itself lives in `src/cell-mode.ts`: `src/gcode/samples.ts` also
+ * needs it to tag bundled samples with a mode, and a dependency-free module
+ * lets it reach the type without importing this store. Re-exported here so
+ * the existing
  * `import { useUiShellStore, type CellMode } from '../../store/uiShellStore'`
  * form (`ModeBar.tsx`) keeps compiling unchanged. */
 export type { CellMode }

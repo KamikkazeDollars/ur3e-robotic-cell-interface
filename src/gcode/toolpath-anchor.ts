@@ -9,13 +9,18 @@
 //
 // Phase 3 consumes both exports below as a stable, documented contract —
 // read this whole comment before changing either constant's derivation.
-import { RAIL_CENTER_X, forwardKinematics, UR3E_READY_POSE } from '../kinematics'
+//
+// G-04-1 gap closure (04-06-PLAN.md) added a mode-parameterised sibling,
+// `toolpathAnchorForMode`, below `TOOLPATH_ANCHOR_OFFSET` — read its own
+// doc comment before touching either.
+import { RAIL_CENTER_X, railStartXForMode, forwardKinematics, UR3E_READY_POSE } from '../kinematics'
 import {
   RIG_Z_OFFSET,
   CARRIAGE_TOP_Y,
   CARRIAGE_BASE_DEPTH,
   CARRIAGE_BLOCK_DEPTH,
 } from '../scene/RailRig'
+import type { CellMode } from '../cell-mode'
 
 /**
  * The world-space point the robot is physically bolted to: the carriage
@@ -109,3 +114,27 @@ export const TOOLPATH_ANCHOR_OFFSET = {
   y: WORKBENCH_TOP_Y,
   z: CARRIAGE_FRONT_FACE_Z + TOOLPATH_CLEARANCE_MARGIN,
 } as const
+
+/**
+ * G-04-1 gap closure: the mode-aware sibling of `TOOLPATH_ANCHOR_OFFSET`
+ * above. Only the station ALONG THE RAIL is mode-dependent — the bench-top
+ * height and the carriage clearance are properties of the rig itself, not
+ * of whichever tool is mounted, so this reuses `TOOLPATH_ANCHOR_OFFSET`'s
+ * own `y`/`z` verbatim and takes its `x` solely from `railStartXForMode`
+ * (`../kinematics`). Duplicating the rail-station offset here instead of
+ * calling that function would let this anchor and the rail's own geometry
+ * drift apart — exactly the failure mode `railStartXForMode`'s own doc
+ * comment (`src/kinematics/rail.ts`) guards against.
+ *
+ * `parseToolpath`'s caller (`cellStore.ts`'s `selectSample`, the one place
+ * that knows the cell's current mode) passes this as the parser's explicit
+ * anchor argument; `Workbench.tsx` calls it directly to derive its own
+ * station so the drawn toolpath and the rendered bench can never disagree.
+ */
+export function toolpathAnchorForMode(mode: CellMode): { x: number; y: number; z: number } {
+  return {
+    x: railStartXForMode(mode),
+    y: TOOLPATH_ANCHOR_OFFSET.y,
+    z: TOOLPATH_ANCHOR_OFFSET.z,
+  }
+}

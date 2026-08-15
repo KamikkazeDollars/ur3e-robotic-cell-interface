@@ -8,9 +8,15 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { parseToolpath } from './parseToolpath'
-import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET, CARRIAGE_FRONT_FACE_Z } from './toolpath-anchor'
+import {
+  ROBOT_MOUNT_WORLD,
+  TOOLPATH_ANCHOR_OFFSET,
+  CARRIAGE_FRONT_FACE_Z,
+  WORKBENCH_TOP_Y,
+  toolpathAnchorForMode,
+} from './toolpath-anchor'
 import { ROBOT_REACH_ENVELOPE, RIG_Z_OFFSET, CARRIAGE_TOP_Y } from '../scene/RailRig'
-import { forwardKinematics, UR3E_READY_POSE, RAIL_CENTER_X } from '../kinematics'
+import { forwardKinematics, UR3E_READY_POSE, RAIL_CENTER_X, railStartXForMode } from '../kinematics'
 
 function readSample(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8')
@@ -90,5 +96,36 @@ describe('D-06 anchor: bundled samples clear the carriage front face (G-02-02)',
       }
     }
     expect(minZ).toBeGreaterThan(CARRIAGE_FRONT_FACE_Z)
+  })
+})
+
+describe('toolpathAnchorForMode (G-04-1 gap closure)', () => {
+  it("takes its X solely from railStartXForMode for each mode — never restates the offset itself", () => {
+    expect(toolpathAnchorForMode('printing').x).toBe(railStartXForMode('printing'))
+    expect(toolpathAnchorForMode('milling').x).toBe(railStartXForMode('milling'))
+  })
+
+  it("shares TOOLPATH_ANCHOR_OFFSET's own y and z for both modes — only the rail station changes", () => {
+    for (const mode of ['printing', 'milling'] as const) {
+      const anchor = toolpathAnchorForMode(mode)
+      expect(anchor.y).toBe(TOOLPATH_ANCHOR_OFFSET.y)
+      expect(anchor.z).toBe(TOOLPATH_ANCHOR_OFFSET.z)
+    }
+  })
+
+  it("parsing the print sample with an explicit mode anchor lands the bounds' X centre on that anchor's X and the min Y on WORKBENCH_TOP_Y", () => {
+    const anchor = toolpathAnchorForMode('printing')
+    const result = parseToolpath(readSample('public/gcode/print-sample.gcode'), anchor)
+    expect(result.bounds).not.toBeNull()
+    const centerX = (result.bounds!.min[0] + result.bounds!.max[0]) / 2
+    expect(centerX).toBeCloseTo(anchor.x, 9)
+    expect(result.bounds!.min[1]).toBeCloseTo(WORKBENCH_TOP_Y, 9)
+  })
+
+  it('parsing with no second argument reproduces, element for element, the existing centred-anchor result (default-argument regression guard)', () => {
+    const gcodeText = readSample('public/gcode/print-sample.gcode')
+    const withDefault = parseToolpath(gcodeText)
+    const withExplicitCentred = parseToolpath(gcodeText, TOOLPATH_ANCHOR_OFFSET)
+    expect(withDefault).toEqual(withExplicitCentred)
   })
 })

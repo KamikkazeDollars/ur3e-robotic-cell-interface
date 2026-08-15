@@ -5,6 +5,9 @@ import {
   railRemainingTravel,
   clampRailPosition,
   resolveRailPosition,
+  RAIL_RESOLUTION_CANDIDATES,
+  MODE_RAIL_START_OFFSET_M,
+  railStartXForMode,
 } from './rail';
 import { ROBOT_MOUNT_WORLD } from '../gcode/toolpath-anchor';
 
@@ -100,5 +103,61 @@ describe('resolveRailPosition', () => {
 
   it('agrees with the invariant ROBOT_MOUNT_WORLD.x === RAIL_CENTER_X the resolver relies on', () => {
     expect(ROBOT_MOUNT_WORLD.x).toBe(RAIL_CENTER_X);
+  });
+});
+
+describe('railStartXForMode (G-04-1 gap closure)', () => {
+  it("printing's station is strictly greater than RAIL_CENTER_X and milling's is strictly less", () => {
+    expect(railStartXForMode('printing')).toBeGreaterThan(RAIL_CENTER_X);
+    expect(railStartXForMode('milling')).toBeLessThan(RAIL_CENTER_X);
+  });
+
+  it('both stations lie inside RAIL_TRAVEL and each equals its own clampRailPosition result', () => {
+    const printingX = railStartXForMode('printing');
+    const millingX = railStartXForMode('milling');
+
+    expect(printingX).toBeGreaterThanOrEqual(RAIL_TRAVEL.min);
+    expect(printingX).toBeLessThanOrEqual(RAIL_TRAVEL.max);
+    expect(printingX).toBe(clampRailPosition(printingX));
+
+    expect(millingX).toBeGreaterThanOrEqual(RAIL_TRAVEL.min);
+    expect(millingX).toBeLessThanOrEqual(RAIL_TRAVEL.max);
+    expect(millingX).toBe(clampRailPosition(millingX));
+  });
+
+  it('the two stations are symmetric about RAIL_CENTER_X, separated by twice MODE_RAIL_START_OFFSET_M', () => {
+    const printingX = railStartXForMode('printing');
+    const millingX = railStartXForMode('milling');
+
+    expect((printingX + millingX) / 2).toBeCloseTo(RAIL_CENTER_X, 9);
+    expect(printingX - millingX).toBeCloseTo(2 * MODE_RAIL_START_OFFSET_M, 9);
+  });
+
+  it('leaves positive remaining travel in both directions at each mode station', () => {
+    for (const mode of ['printing', 'milling'] as const) {
+      const remaining = railRemainingTravel(railStartXForMode(mode));
+      expect(remaining.negative).toBeGreaterThan(0);
+      expect(remaining.positive).toBeGreaterThan(0);
+    }
+  });
+
+  it('resolveRailPosition is translation-covariant under the mode offset, within one candidate grid step — the property that lets the anchor, rather than the resolver, carry the mode', () => {
+    const mount = ROBOT_MOUNT_WORLD;
+    // Same symmetric point cloud as the "resolves at RAIL_CENTER_X" test
+    // above, so the baseline resolves exactly to RAIL_CENTER_X.
+    const points: [number, number, number][] = [
+      [mount.x - 0.05, mount.y, mount.z + 0.4],
+      [mount.x + 0.05, mount.y, mount.z + 0.4],
+      [mount.x - 0.03, mount.y + 0.02, mount.z + 0.35],
+      [mount.x + 0.03, mount.y + 0.02, mount.z + 0.35],
+    ];
+    const gridStep = (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / (RAIL_RESOLUTION_CANDIDATES - 1);
+    const baseline = resolveRailPosition(points, mount);
+
+    for (const offset of [MODE_RAIL_START_OFFSET_M, -MODE_RAIL_START_OFFSET_M]) {
+      const translated = points.map(([x, y, z]) => [x + offset, y, z] as [number, number, number]);
+      const resolved = resolveRailPosition(translated, mount);
+      expect(Math.abs(resolved - (baseline + offset))).toBeLessThanOrEqual(gridStep);
+    }
   });
 });

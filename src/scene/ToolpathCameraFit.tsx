@@ -3,6 +3,7 @@ import { useThree } from '@react-three/fiber'
 import { Vector3, type PerspectiveCamera as ThreePerspectiveCamera } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useCellStore } from '../store/cellStore'
+import { shouldTightFrameOnReady } from './camera-fit-origin'
 
 // Padding factor applied to the computed fit distance, a little above 1, so
 // the toolpath's bounding box doesn't touch the viewport edges.
@@ -28,6 +29,17 @@ const FIT_PADDING = 1.3
  * so bounds are never available on that transition. `toolpathLoadStatus`
  * flips to 'ready' only once `toolpath.bounds` is actually populated,
  * which is the transition this effect needs to react to.
+ *
+ * G-04-1 checkpoint follow-up (plan 04-06 continuation): `toolpathLoadStatus`
+ * also flips to 'ready' when `useCellModeSampleSync.ts` auto-reselects a
+ * sample after a mode switch, not just on a manual dropdown pick. That
+ * mode-triggered case must NOT re-trigger this tight auto-frame — the user
+ * asked to see the rail sweep, not zoom in on whichever job the mode-sync
+ * silently picked. `shouldTightFrameOnReady` (camera-fit-origin.ts) reads
+ * `cellStore`'s `lastSelectSampleOrigin` to tell the two cases apart; the
+ * mode-sync case defers to `requestCameraReset()` (the SAME wide framing
+ * Reset View already produces via `CameraResetListener.tsx`) instead of
+ * computing a fit here.
  */
 export default function ToolpathCameraFit() {
   const camera = useThree((state) => state.camera) as ThreePerspectiveCamera
@@ -35,9 +47,21 @@ export default function ToolpathCameraFit() {
   const toolpathLoadStatus = useCellStore((state) => state.toolpathLoadStatus)
 
   useEffect(() => {
-    if (!controls) return
     if (toolpathLoadStatus !== 'ready') return
-    const bounds = useCellStore.getState().toolpath?.bounds
+    const state = useCellStore.getState()
+
+    // G-04-1 checkpoint follow-up: a mode-sync-triggered reselection flips
+    // this same 'ready' transition, but wants the wide Reset View framing,
+    // not this tight fit — see the file-header comment. This check runs
+    // before the `controls` guard below because `requestCameraReset()` is a
+    // store-only write; it does not need `controls` to be non-null.
+    if (!shouldTightFrameOnReady(state.lastSelectSampleOrigin)) {
+      state.requestCameraReset()
+      return
+    }
+
+    if (!controls) return
+    const bounds = state.toolpath?.bounds
     if (!bounds) return
 
     const center = new Vector3(

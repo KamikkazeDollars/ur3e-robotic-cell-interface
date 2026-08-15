@@ -132,8 +132,19 @@ interface RawSegment {
  * feed-rate pre-scan first, then drives `gcode-toolpath`'s modal-state
  * interpreter (`new Toolpath({ addLine, addArcCurve }).loadFromStringSync`),
  * zipping the pre-scanned feed rate onto each callback by call order.
+ *
+ * `anchor` (G-04-1 gap closure, 04-06-PLAN.md) defaults to
+ * `TOOLPATH_ANCHOR_OFFSET` — the original centred anchor — so every existing
+ * call site and every pre-existing test keeps its single-argument call
+ * signature and result verbatim. The parameter exists so a caller that DOES
+ * know the cell's current mode (`cellStore.ts`'s `selectSample`, via
+ * `toolpathAnchorForMode`) can choose a different world-space station
+ * without this pure, store-free module importing anything about UI state.
  */
-export function parseToolpath(gcodeText: string): ParsedToolpath {
+export function parseToolpath(
+  gcodeText: string,
+  anchor: { x: number; y: number; z: number } = TOOLPATH_ANCHOR_OFFSET,
+): ParsedToolpath {
   const feedRateQueue = extractFeedRateQueue(gcodeText)
   let feedRateIndex = 0
   let skippedMotionCount = 0
@@ -252,9 +263,9 @@ export function parseToolpath(gcodeText: string): ParsedToolpath {
     const centerX = (min[0] + max[0]) / 2
     const centerZ = (min[2] + max[2]) / 2
     appliedAnchorTranslation = [
-      TOOLPATH_ANCHOR_OFFSET.x - centerX,
-      TOOLPATH_ANCHOR_OFFSET.y - min[1],
-      TOOLPATH_ANCHOR_OFFSET.z - centerZ,
+      anchor.x - centerX,
+      anchor.y - min[1],
+      anchor.z - centerZ,
     ]
 
     const [tx, ty, tz] = appliedAnchorTranslation
