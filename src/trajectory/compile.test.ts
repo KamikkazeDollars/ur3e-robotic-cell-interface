@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { compileTrajectory, dhFrameToScene } from './compile'
-import { flattenToolpathPoints } from './arc-length'
+import { flattenToolpathPoints, buildArcLengthTable } from './arc-length'
 import { forwardKinematics, RAIL_CENTER_X, UR3E_PARKED_POSE, type JointAngles } from '../kinematics'
 import { ROBOT_MOUNT_WORLD, TOOLPATH_ANCHOR_OFFSET, CARRIAGE_FRONT_FACE_Z } from '../gcode/toolpath-anchor'
 import { parseToolpath } from '../gcode/parseToolpath'
@@ -148,6 +148,89 @@ describe('compileTrajectory', () => {
       (sample) => sample.scrubFraction > 0 && sample.scrubFraction < boundaryFraction,
     )
     expect(intermediateTravelSamples.length).toBeGreaterThan(0)
+  })
+})
+
+describe('compileTrajectory — travel/toolpath length split', () => {
+  const toolpath = buildSquareToolpath()
+  const result = compileTrajectory(toolpath)
+
+  it('both fields are finite and strictly greater than 0', () => {
+    expect(Number.isFinite(result.travelLength)).toBe(true)
+    expect(Number.isFinite(result.toolpathLength)).toBe(true)
+    expect(result.travelLength).toBeGreaterThan(0)
+    expect(result.toolpathLength).toBeGreaterThan(0)
+  })
+
+  it('their sum equals the total arc length (toolpath portion from buildArcLengthTable, travel portion measured from the compiled samples)', () => {
+    const flattened = flattenToolpathPoints(toolpath.segments)
+    const referenceToolpathLength = buildArcLengthTable(flattened).totalLength
+
+    const boundarySample = result.samples.find(
+      (sample) =>
+        sample.point[0] === flattened[0][0] &&
+        sample.point[1] === flattened[0][1] &&
+        sample.point[2] === flattened[0][2],
+    )!
+    const travelSamples = result.samples.filter((sample) => sample.scrubFraction <= boundarySample.scrubFraction)
+    let referenceTravelLength = 0
+    for (let i = 1; i < travelSamples.length; i++) {
+      const [x0, y0, z0] = travelSamples[i - 1].point
+      const [x1, y1, z1] = travelSamples[i].point
+      referenceTravelLength += Math.hypot(x1 - x0, y1 - y0, z1 - z0)
+    }
+
+    // The travel phase's own sub-path is 4 waypoints (parked pose, lift,
+    // above-first-point, first point), not a straight line — the chord-sum
+    // above under-measures by a small, bounded amount at the two interior
+    // corners (adjacent samples straddling a bend measure a chord shorter
+    // than the true bent arc), while every other adjacent pair lies on a
+    // straight sub-segment where chord length equals arc length exactly.
+    // Bounded by 2 corners * TRAJECTORY_SAMPLE_SPACING_M (2mm) each; 5mm is
+    // a safe margin above that, well under 1% of the ~0.8m travel length.
+    expect(result.toolpathLength).toBeCloseTo(referenceToolpathLength, 9)
+    expect(Math.abs(result.travelLength - referenceTravelLength)).toBeLessThan(0.005)
+    expect(result.travelLength + result.toolpathLength).toBeGreaterThanOrEqual(
+      referenceTravelLength + referenceToolpathLength - 0.005,
+    )
+  })
+
+  it("the sample whose point deep-equals the toolpath's first flattened point has scrubFraction equal to travelLength / (travelLength + toolpathLength) within 1e-9", () => {
+    const flattened = flattenToolpathPoints(toolpath.segments)
+    const boundarySample = result.samples.find(
+      (sample) =>
+        sample.point[0] === flattened[0][0] &&
+        sample.point[1] === flattened[0][1] &&
+        sample.point[2] === flattened[0][2],
+    )!
+    const expectedBoundaryFraction = result.travelLength / (result.travelLength + result.toolpathLength)
+    expect(boundarySample.scrubFraction).toBeCloseTo(expectedBoundaryFraction, 9)
+  })
+
+  it('the degenerate branch (fewer than two distinct flattened points) returns 0 for both fields and keeps the existing samples: [] / status: ready contract', () => {
+    const degenerateToolpath: ParsedToolpath = {
+      segments: [
+        {
+          type: 'cut',
+          motion: 'G1',
+          source: 'line',
+          points: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          feedRate: 600,
+        },
+      ],
+      unit: 'mm',
+      skippedMotionCount: 0,
+      appliedAnchorTranslation: [0, 0, 0],
+      bounds: null,
+    }
+    const degenerateResult = compileTrajectory(degenerateToolpath)
+    expect(degenerateResult.travelLength).toBe(0)
+    expect(degenerateResult.toolpathLength).toBe(0)
+    expect(degenerateResult.samples).toEqual([])
+    expect(degenerateResult.status).toBe('ready')
   })
 })
 
