@@ -129,7 +129,7 @@ Plans:
   1. User can press play and watch the UR3e animate continuously along the full toolpath in real time, synced to the visible trajectory line
   2. During playback, the trajectory highlight and TCP marker track the robot's current position smoothly, driven by an imperative render loop rather than per-frame React state updates
 
-**Plans**: 3/3 plans executed
+**Plans**: 6 plans (3/3 executed, 3 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -140,6 +140,17 @@ Plans:
 
 - [x] 04-02-PLAN.md — D-02 move-type-weighted timing (rapids traverse faster than cuts) on a published travel/toolpath length split
 - [x] 04-03-PLAN.md — Shared interpolated sample lookup so the arm and scrub marker glide instead of stepping
+
+**Gap closure — G-04-1** *(from 04-UAT.md; wave numbers are relative to this run)*
+
+*Wave 1*
+
+- [ ] 04-04-PLAN.md — Traversed-path highlight over the toolpath, larger gated scrub marker, playback clock moved ahead of every per-frame consumer
+- [ ] 04-05-PLAN.md — Mode-tagged bundled samples, picker filtered by the active cell mode, re-selection on mode change
+
+*Wave 2 (blocked on both)*
+
+- [ ] 04-06-PLAN.md — Per-mode rail start station (printing right of centre, milling left), workbench travels with it, plus blocking human verification of all four G-04-1 items
 
 ### Phase 5: Telemetry / Dashboard
 
