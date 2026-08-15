@@ -98,7 +98,7 @@ Plans:
   1. User can drag a scrub control to any point in the timeline and see the UR3e (including the rail axis) re-pose to accurately match the toolpath at that instant, with no visible snapping or flipping between IK solutions as the scrub position changes
   2. The 7th-axis rail is resolved to a consistent, documented position at each scrub point via a redundancy-resolution heuristic, keeping the robot within joint and travel limits across the full timeline
 
-**Plans**: 3/3 plans executed
+**Plans**: 3/5 plans executed (2 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -109,6 +109,14 @@ Plans:
 
 - [x] 03-02-PLAN.md — Singularity classification stored per sample (D-08), unreachable-point disclosure (D-06), carriage driven by the resolved rail position, joint-limit provenance settled (SIM-05)
 - [x] 03-03-PLAN.md — Scrub-position marker on the toolpath (D-07), percentage readout and disabled empty state, phase visual sign-off (SIM-05)
+
+**Gap closure — Wave 1** *(from 03-UAT.md; G-03-1 and G-03-3 were already resolved by commit `e9dceb1`)*
+
+- [ ] 03-04-PLAN.md — G-03-6: one token-backed scene palette replacing three copied tone constants, giving the rail rig, workbench and floor three distinct colors with an anti-drift test (SCENE-03, SCENE-04)
+
+**Gap closure — Wave 2** *(blocked on 03-04)*
+
+- [ ] 03-05-PLAN.md — G-03-4: toolpath marker radius derived from `ParsedToolpath.bounds` instead of a hardcoded constant, plus vertical guide stems and tabletop footprints under each marker; marker COUNT stays deferred to Phase 6 (SIM-02, SIM-05)
 
 ### Phase 4: Playback Engine
 
