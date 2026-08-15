@@ -132,7 +132,12 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 04-01-PLAN.md — Tracer: Play/Pause control drives a dual-cadence animation clock end-to-end, plus D-04 pause-on-drag
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 04-02-PLAN.md — D-02 move-type-weighted timing (rapids traverse faster than cuts) on a published travel/toolpath length split
 - [ ] 04-03-PLAN.md — Shared interpolated sample lookup so the arm and scrub marker glide instead of stepping
 
