@@ -46,6 +46,22 @@ export type RobotLoadStatus = 'loading' | 'ready' | 'error'
  * `RobotLoadStatus`: this is UI-cadence intent, not a per-frame value. */
 export type ToolpathLoadStatus = 'idle' | 'parsing' | 'ready' | 'error'
 
+/**
+ * Distinguishes who dispatched a `selectSample` call (G-04-1 checkpoint
+ * follow-up, plan 04-06). A manual dropdown pick (`SampleSelect.tsx`, the
+ * default when no origin is passed) wants the existing tight D-05 auto-frame
+ * `ToolpathCameraFit.tsx` performs on load. A mode switch's automatic
+ * reselection (`useCellModeSampleSync.ts`, dispatched when the loaded sample
+ * no longer matches the newly active mode) also flips `toolpathLoadStatus`
+ * to 'ready' — the SAME trigger `ToolpathCameraFit.tsx` reacts to — but the
+ * user did not ask to zoom in on whichever job the mode-sync silently
+ * picked for them; they asked to see the rail sweep across the whole cell.
+ * `lastSelectSampleOrigin` lets `ToolpathCameraFit.tsx` tell the two cases
+ * apart without `SampleSelect.tsx` having to change at all (its call omits
+ * the argument, so it keeps defaulting to 'manual').
+ */
+export type SelectSampleOrigin = 'manual' | 'mode-sync'
+
 interface CellState {
   /**
    * Monotonically increasing token, not a boolean flag. A boolean would
@@ -80,6 +96,15 @@ interface CellState {
    * the same stale-request guard `toolpath` itself is set under, so a
    * superseded compile can never reach the store. */
   trajectory: CompiledTrajectory | null
+  /** The `SelectSampleOrigin` of the most recently DISPATCHED `selectSample`
+   * call, written on every branch (unknown-id, parsing-entry, success,
+   * failure) alongside that branch's other fields — the same
+   * every-branch-writes-together convention `scrubFraction`/
+   * `livePlayback.fraction` already follow in this function. Read (never
+   * subscribed) by `ToolpathCameraFit.tsx` inside its own
+   * `toolpathLoadStatus` effect, via `getState()`, exactly as that effect
+   * already reads `toolpath.bounds` non-reactively. */
+  lastSelectSampleOrigin: SelectSampleOrigin
   /** Coarse-cadence scrub position in [0, 1] along the current trajectory's
    * arc-length parameterisation — see the file-header comment above. */
   scrubFraction: number
@@ -113,8 +138,17 @@ interface CellState {
    * `parseToolpath` succeeds (inside the same stale-request guard),
    * compiles the trajectory via `compileTrajectory` and resets
    * `scrubFraction` to zero for the new sample.
+   *
+   * `origin` defaults to `'manual'` — every pre-existing call site
+   * (`SampleSelect.tsx`'s dropdown `onChange`, and every test in this
+   * file written before G-04-1's checkpoint follow-up) keeps behaving
+   * exactly as before with no code change required. Only
+   * `useCellModeSampleSync.ts` passes `'mode-sync'` explicitly, tagging its
+   * automatic reselection so `ToolpathCameraFit.tsx` can defer to the wide
+   * Reset View framing instead of the tight D-05 auto-frame a human's own
+   * dropdown pick still gets.
    */
-  selectSample: (sampleId: string) => Promise<void>
+  selectSample: (sampleId: string, origin?: SelectSampleOrigin) => Promise<void>
 }
 
 /**
@@ -136,6 +170,7 @@ export const useCellStore = create<CellState>((set, get) => ({
   toolpathLoadStatus: 'idle',
   toolpath: null,
   trajectory: null,
+  lastSelectSampleOrigin: 'manual',
   scrubFraction: 0,
   setScrubFraction: (fraction) => {
     const clamped = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0
@@ -149,7 +184,7 @@ export const useCellStore = create<CellState>((set, get) => ({
   play: () => set({ isPlaying: true }),
   pause: () => set({ isPlaying: false }),
   livePlayback: { fraction: 0 },
-  selectSample: async (sampleId) => {
+  selectSample: async (sampleId, origin = 'manual') => {
     selectSampleRequestId += 1
     const requestId = selectSampleRequestId
 
@@ -166,6 +201,7 @@ export const useCellStore = create<CellState>((set, get) => ({
         trajectory: null,
         isPlaying: false,
         scrubFraction: 0,
+        lastSelectSampleOrigin: origin,
       })
       return
     }
@@ -181,6 +217,7 @@ export const useCellStore = create<CellState>((set, get) => ({
       trajectory: null,
       isPlaying: false,
       scrubFraction: 0,
+      lastSelectSampleOrigin: origin,
     })
 
     // G-04-1 gap closure: resolve the anchor from the cell's mode BEFORE the
@@ -220,14 +257,28 @@ export const useCellStore = create<CellState>((set, get) => ({
       // scrubFraction so picking a new sample mid-run stops the clock
       // instead of animating a stale position against a fresh trajectory.
       get().livePlayback.fraction = 0
-      set({ toolpath, toolpathLoadStatus: 'ready', trajectory, scrubFraction: 0, isPlaying: false })
+      set({
+        toolpath,
+        toolpathLoadStatus: 'ready',
+        trajectory,
+        scrubFraction: 0,
+        isPlaying: false,
+        lastSelectSampleOrigin: origin,
+      })
     } catch (err) {
       console.error('Failed to load g-code sample:', err)
       // Same discard on the failure path: a slow failure must not stamp an
       // error status over a newer selection that already succeeded.
       if (requestId !== selectSampleRequestId) return
       get().livePlayback.fraction = 0
-      set({ toolpathLoadStatus: 'error', toolpath: null, trajectory: null, isPlaying: false, scrubFraction: 0 })
+      set({
+        toolpathLoadStatus: 'error',
+        toolpath: null,
+        trajectory: null,
+        isPlaying: false,
+        scrubFraction: 0,
+        lastSelectSampleOrigin: origin,
+      })
     }
   },
 }))
