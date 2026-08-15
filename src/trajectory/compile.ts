@@ -136,6 +136,21 @@ export interface CompiledTrajectory {
    * `samples.length` when frozen, so a consumer can tell a complete
    * trajectory from a truncated one (D-06). */
   requestedSampleCount: number
+  /** Arc length (scene metres) of the prepended parked-pose-to-first-point
+   * travel phase (the four-waypoint lift, traverse, descend sequence). This
+   * is deliberately non-kinematic bookkeeping added for Phase 4's
+   * move-type-weighted playback timing (D-02), not a change to how any pose
+   * is solved. `travelLength + toolpathLength` is exactly the denominator
+   * this function already divides by to produce each sample's
+   * `scrubFraction`, so a consumer can compute the travel/toolpath boundary
+   * fraction as `travelLength / (travelLength + toolpathLength)` and land
+   * precisely on the sample whose point is the toolpath's first point,
+   * rather than re-deriving the boundary by matching point coordinates. */
+  travelLength: number
+  /** Arc length (scene metres) of the g-code's own path (the toolpath
+   * proper, excluding the prepended travel phase). See `travelLength`'s doc
+   * comment for the shared boundary-fraction contract. */
+  toolpathLength: number
 }
 
 /**
@@ -231,7 +246,14 @@ export function compileTrajectory(toolpath: ParsedToolpath): CompiledTrajectory 
   const points = flattenToolpathPoints(toolpath.segments)
 
   if (points.length < 2) {
-    return { samples: [], railPos: RAIL_CENTER_X, status: 'ready', requestedSampleCount: 0 }
+    return {
+      samples: [],
+      railPos: RAIL_CENTER_X,
+      status: 'ready',
+      requestedSampleCount: 0,
+      travelLength: 0,
+      toolpathLength: 0,
+    }
   }
 
   const toolpathTable = buildArcLengthTable(points)
@@ -344,5 +366,5 @@ export function compileTrajectory(toolpath: ParsedToolpath): CompiledTrajectory 
 
   const requestedSampleCount = travelSampleCount + toolpathSampleCount - 1
 
-  return { samples, railPos, status, requestedSampleCount }
+  return { samples, railPos, status, requestedSampleCount, travelLength, toolpathLength }
 }
