@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-inverse-kinematics-trajectory-compile-scrub
 source: [03-VERIFICATION.md, Phase three problems.md]
 started: 2026-08-14T18:26:44Z
-updated: 2026-08-14T18:41:00Z
+updated: 2026-08-15T00:15:24Z
 ---
 
 ## Current Test
@@ -63,21 +63,37 @@ blocked: 0
 
 - gap_id: G-03-1
   truth: "The UR3e's flange sweeps continuously along the drawn toolpath with no joint visibly whipping, snapping, or reversing mid-drag."
-  status: failed
+  status: resolved
   reason: "User reported: the robot goes into singularities when going over the workbench from home position, and goes through the table while doing so."
   severity: blocker
   test: 1
-  artifacts: []
+  root_cause: "pickClosestBranch/jointSpaceDistance (src/kinematics/inverse-kinematics.ts) scored IK branches by raw component subtraction while solveUR6IK normalizes every branch into (-pi, pi]. At a 2pi wrap boundary crossing, the geometrically-continuous branch scored ~2pi away and lost to a physically distant whole-arm reconfiguration -- a 4.28 rad snap that read as a singularity whip (classifySingularity actually reported zero true singularities) and left the arm 0.008m from the tabletop instead of the designed 0.080m clearance. A second, independent cause: UR3E_PARKED_POSE (src/kinematics/ur3e-dh.ts) did not match the fixed tool-down orientation every other sample solves against, causing a 1.57 rad wrist snap on the very first scrub step."
+  artifacts:
+    - path: "src/kinematics/inverse-kinematics.ts"
+      issue: "pickClosestBranch lacked wrap-aware unwrapping before scoring candidate branches"
+    - path: "src/kinematics/ur3e-dh.ts"
+      issue: "UR3E_PARKED_POSE orientation did not match the fixed tool-down IK target every other sample uses"
   missing: []
+  resolved_by: "commit e9dceb1 (fix(kinematics): wrap-aware IK branch continuity + tool-down parked pose)"
+  resolved_at: "2026-08-15"
+  debug_session: ".planning/debug/resolved/table-clipping-singularities.md"
 
 - gap_id: G-03-3
   truth: "The arm's home-to-toolpath travel move stays clear of the table at all times."
-  status: failed
+  status: resolved
   reason: "User confirms the known open issue is still present, and adds new detail: the travel move also passes through joint singularities (not just visually clipping the table). This is a stronger/more specific failure than the originally-diagnosed table-AABB-vs-TCP-point gap in 03-REVIEW.md's IN-02 — singularities suggest the travel waypoints themselves (parked pose -> lift -> approach -> descend) may be poorly chosen relative to the robot's reachable/well-conditioned workspace, not just geometrically colliding with the table."
   severity: blocker
   test: 3
-  artifacts: []
+  root_cause: "Same two root causes as G-03-1 -- both symptoms (whipping and table clearance loss) share one dominant cause (wrap-unaware branch continuity scoring) plus one independent cause (parked-pose orientation mismatch on the first step)."
+  artifacts:
+    - path: "src/kinematics/inverse-kinematics.ts"
+      issue: "pickClosestBranch lacked wrap-aware unwrapping before scoring candidate branches"
+    - path: "src/kinematics/ur3e-dh.ts"
+      issue: "UR3E_PARKED_POSE orientation did not match the fixed tool-down IK target every other sample uses"
   missing: []
+  resolved_by: "commit e9dceb1 (fix(kinematics): wrap-aware IK branch continuity + tool-down parked pose)"
+  resolved_at: "2026-08-15"
+  debug_session: ".planning/debug/resolved/table-clipping-singularities.md"
 
 - gap_id: G-03-4
   truth: "Each operation in a sample has its own distinct, visible start marker on the toolpath."
@@ -85,8 +101,17 @@ blocked: 0
   reason: "User reported: 3 operations exist but only 2 points are shown; the vertical line a point sits on is not very visible; points are too large relative to the trajectory."
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "Three independent causes bundled in one report: (1) Toolpath.tsx renders exactly 2 markers for the toolpath's overall start/end point by design (Phase 2, commit f1e8069, gap G-02-03) -- per-operation markers require operation-grouping data that doesn't exist anywhere in the pipeline (ClassifiedSegment/ParsedToolpath/CompiledTrajectory) and are formally scoped as unbuilt Phase 6 work (ROADMAP.md); (2) no dedicated vertical guide-line component exists -- the user is seeing ordinary plunge/rapid segments with no distinct anchor styling; (3) MARKER_RADIUS (0.012m) is a hardcoded absolute constant never derived from the toolpath's actual bounding box (ParsedToolpath.bounds is computed but unused for sizing)."
+  artifacts:
+    - path: "src/scene/Toolpath.tsx"
+      issue: "MARKER_RADIUS hardcoded at line 24 instead of scaled from toolpath.bounds; no distinct vertical guide-line styling for markers"
+    - path: "src/gcode/parseToolpath.ts"
+      issue: "bounds field computed but unused for marker sizing"
+  missing:
+    - "Scale MARKER_RADIUS from ParsedToolpath.bounds instead of a hardcoded absolute value"
+    - "Add distinct vertical guide-line/stem styling under each marker so it reads clearly against the trajectory"
+  scope_decision: "User confirmed 2026-08-15: fix sizing and guide-line visibility now; defer per-operation marker count (2 vs 3) to Phase 6 as originally scoped in ROADMAP.md -- not a Phase 3 regression."
+  debug_session: ".planning/debug/operation-point-marker-count-and-sizing.md"
 
 - gap_id: G-03-6
   truth: "Scene elements are visually distinguishable from each other by color."
@@ -94,8 +119,18 @@ blocked: 0
   reason: "User reported: the rail rig and workbench currently share the same color, and the layout/floor should also be a distinct color."
   severity: cosmetic
   test: 6
-  artifacts: []
-  missing: []
+  root_cause: "RailRig.tsx and Workbench.tsx each independently declare a local SECONDARY_TONE constant hardcoded to the identical, stale hex literal #E4E7EB (Workbench.tsx's own comment admits it was copied from RailRig.tsx). #E4E7EB does not appear anywhere in the current --ui-* design-token palette (src/index.css) -- it's orphaned from before the Quick-260815-3cn retheme. CellScene.tsx's floor uses a third, separately-declared SECONDARY_TONE (#3C4149, matching --ui-border), so the floor is already distinct, but all three constants are disconnected copies with no single source of truth."
+  artifacts:
+    - path: "src/scene/RailRig.tsx"
+      issue: "hardcodes stale #E4E7EB, shared verbatim with Workbench.tsx"
+    - path: "src/scene/Workbench.tsx"
+      issue: "hardcodes the same stale #E4E7EB, explicitly copied from RailRig.tsx"
+    - path: "src/scene/CellScene.tsx"
+      issue: "hardcodes a third, disconnected SECONDARY_TONE (#3C4149) for the floor"
+  missing:
+    - "Assign genuinely distinct colors to the rail rig and workbench, sourced from/extending the existing --ui-* palette"
+    - "Consolidate the three independently-declared SECONDARY_TONE locals into one shared, correctly-sourced constant/export"
+  debug_session: ".planning/debug/rail-workbench-layout-color-differentiation.md"
 
 ## Deferred Follow-Ups
 

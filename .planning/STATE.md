@@ -105,7 +105,7 @@ None yet.
 
 - [Phase 3]: Closed-form IK algorithm and 7th-axis rail redundancy-resolution heuristic are architecturally decided but not yet validated against actual UR3e DH values — flagged for a research/validation pass before/during planning.
 - [Phase 2+]: Code review flagged a non-functional ESLint setup (no `eslint.config.js` despite ESLint/typescript-eslint being installed and CLAUDE.md mandating it) and a missing cleanup guard on `RobotModel.tsx`'s async URDF load under React StrictMode. Non-blocking; worth fixing early in Phase 2 before more scene code accumulates. See `01-REVIEW.md`.
-- [Phase 3, Plan 1]: KNOWN OPEN ISSUE — the travel-move waypoint routing (compileTrajectory) still clips through the table per the user's live visual test, despite an automated regression test and analytical footprint check passing. Likely gap: the check validates only the tracked TCP point against a simplified table AABB, not the actual rendered mesh or the rest of the arm's body. Deferred to a consolidated fix pass after Wave 2 (plans 03-02, 03-03).
+- [Phase 3]: RESOLVED 2026-08-15 (commit `e9dceb1`) — the travel-move table-clipping/joint-whipping issue (previously listed here as a known open issue) was root-caused to two defects in `pickClosestBranch`'s wrap-unaware branch continuity scoring and a misoriented `UR3E_PARKED_POSE`. Fixed, regression-tested, and human-verified live in-app on both bundled samples. See `.planning/debug/resolved/table-clipping-singularities.md`.
 
 ## Deferred Items
 
