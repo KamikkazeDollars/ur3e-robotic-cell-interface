@@ -129,7 +129,7 @@ Plans:
   1. User can press play and watch the UR3e animate continuously along the full toolpath in real time, synced to the visible trajectory line
   2. During playback, the trajectory highlight and TCP marker track the robot's current position smoothly, driven by an imperative render loop rather than per-frame React state updates
 
-**Plans**: 5/6 plans executed (3/3 executed, 3 gap-closure plans pending)
+**Plans**: 6/6 plans executed (3/3 executed, 3 gap-closure plans pending)
 
 Plans:
 **Wave 1**
@@ -150,7 +150,7 @@ Plans:
 
 *Wave 2 (blocked on both)*
 
-- [ ] 04-06-PLAN.md — Per-mode rail start station (printing right of centre, milling left), workbench travels with it, plus blocking human verification of all four G-04-1 items
+- [x] 04-06-PLAN.md — Per-mode rail start station (printing right of centre, milling left), workbench travels with it, plus blocking human verification of all four G-04-1 items
 
 ### Phase 5: Telemetry / Dashboard
 
@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
 | 2. G-code Import + Static Toolpath | 5/5 | Complete    | 2026-08-14 |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 3/3 | In Progress|  |
-| 4. Playback Engine | 5/6 | In Progress|  |
+| 4. Playback Engine | 6/6 | In Progress|  |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
 | 6. Operations Tree + Mill Engagement Coloring | 0/? | Not started | - |
 | 7. Tool-Changer + Print/Mill Tabs | 0/? | Not started | - |
