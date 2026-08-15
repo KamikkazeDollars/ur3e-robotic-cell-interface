@@ -7,8 +7,15 @@ import SceneStatusOverlay from './ui/SceneStatusOverlay'
 import TabRail from './ui/shell/TabRail'
 import TabPanel from './ui/shell/TabPanel'
 import ModeBar from './ui/shell/ModeBar'
+import useCellModeSampleSync from './ui/useCellModeSampleSync'
 
 function App() {
+  // G-04-1 gap closure: mounted once at the shell level so the loaded
+  // sample and the active cell mode can never drift apart. See the hook's
+  // own header comment for why this crossing lives here rather than inside
+  // uiShellStore's setCellMode.
+  useCellModeSampleSync()
+
   return (
     <>
       <CellScene />

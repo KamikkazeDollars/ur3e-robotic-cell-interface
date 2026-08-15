@@ -1,5 +1,6 @@
 import { useCellStore } from '../store/cellStore'
-import { GCODE_SAMPLES } from '../gcode/samples'
+import { useUiShellStore } from '../store/uiShellStore'
+import { samplesForMode } from '../gcode/samples'
 import { SCENE_STATUS_COPY } from './scene-status-copy'
 
 // D-02: a plain native `<select>` rather than a registry component —
@@ -51,12 +52,21 @@ const noteStyle: React.CSSProperties = {
  * `requestedSampleCount` — never a second hardcoded number. This is
  * deliberately non-blocking chrome, not the centred `SceneStatusOverlay`
  * panel reserved for blocking states.
+ *
+ * G-04-1 gap closure: the option list is filtered to the active cell mode
+ * via `samplesForMode(cellMode)` rather than rendered from the full
+ * `GCODE_SAMPLES` list — the picker now offers only jobs the currently
+ * mounted tool suits. `useCellModeSampleSync.ts` (mounted once at the App
+ * shell level) keeps the loaded selection consistent when the mode changes
+ * out from under it.
  */
 export default function SampleSelect() {
   const selectedSampleId = useCellStore((state) => state.selectedSampleId)
   const selectSample = useCellStore((state) => state.selectSample)
   const toolpath = useCellStore((state) => state.toolpath)
   const trajectory = useCellStore((state) => state.trajectory)
+  const cellMode = useUiShellStore((state) => state.cellMode)
+  const availableSamples = samplesForMode(cellMode)
 
   const unitLabel = toolpath?.unit ?? 'mm'
   const skippedMotionCount = toolpath?.skippedMotionCount ?? 0
@@ -77,7 +87,7 @@ export default function SampleSelect() {
         <option value="" disabled>
           Select a g-code sample…
         </option>
-        {GCODE_SAMPLES.map((sample) => (
+        {availableSamples.map((sample) => (
           <option key={sample.id} value={sample.id}>
             {sample.label}
           </option>
