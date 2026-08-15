@@ -32,7 +32,7 @@ function buildTrajectory(
   samples: TrajectorySample[],
   status: CompiledTrajectory['status'] = 'ready',
 ): CompiledTrajectory {
-  return { samples, railPos: 0, status, requestedSampleCount: samples.length }
+  return { samples, railPos: 0, status, requestedSampleCount: samples.length, travelLength: 0, toolpathLength: 0 }
 }
 
 /** Same square toolpath `compile.test.ts` uses — reachable at this scale,
