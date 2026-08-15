@@ -1,19 +1,15 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useCellStore } from '../store/cellStore'
-import {
-  UNIFORM_FRACTION_MAPPING,
-  resumeElapsedSeconds,
-  stepClock,
-  type ClockState,
-  type FractionMapping,
-} from './clock-step'
+import { resumeElapsedSeconds, stepClock, type ClockState, type FractionMapping } from './clock-step'
+import { buildDurationMapping } from './duration-mapping'
 import type { ParsedToolpath } from '../gcode/parseToolpath'
 
 /** The active mapping together with the `ParsedToolpath` object identity it
  * was built for — rebuilt only when the loaded sample changes, never every
- * frame. Plan 04-02 swaps `UNIFORM_FRACTION_MAPPING` for
- * `buildDurationMapping(toolpath, trajectory)` here with no other change. */
+ * frame. The D-02 move-type-weighted mapping (`buildDurationMapping`, plan
+ * 04-02) replaces the tracer plan's uniform mapping here, with no other
+ * change to this hook. */
 interface MappingRecord {
   toolpath: ParsedToolpath
   mapping: FractionMapping
@@ -47,7 +43,7 @@ export default function usePlaybackClock() {
     // Rebuild the mapping only when it doesn't exist yet or the loaded
     // sample changed — cheap: built once per selection, not per frame.
     if (!mappingRecordRef.current || mappingRecordRef.current.toolpath !== toolpath) {
-      mappingRecordRef.current = { toolpath, mapping: UNIFORM_FRACTION_MAPPING }
+      mappingRecordRef.current = { toolpath, mapping: buildDurationMapping(toolpath, trajectory) }
     }
     const mapping = mappingRecordRef.current.mapping
 
