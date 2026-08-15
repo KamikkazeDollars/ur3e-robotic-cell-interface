@@ -18,10 +18,10 @@ The 3D toolpath simulation must work flawlessly end-to-end: import g-code → se
 - ✓ Project is version-controlled on GitHub and deployed to a publicly reachable URL — Phase 1
 - ✓ User can select a bundled g-code sample and have the system parse it into a classified toolpath — Phase 2 (scoped to curated bundled samples, not general file upload; see D-01 below)
 - ✓ Toolpath lines are color-coded by move type (rapid vs. cutting), rendered on a workbench in front of the robot — Phase 2
+- ✓ User can start playback of the simulated toolpath and watch the robot follow it in real time — Phase 4 (dual-cadence imperative clock, move-type-weighted timing, traversed-path highlight, mode-filtered samples, per-mode rail station)
 
 ### Active
 
-- [ ] User can start playback of the simulated toolpath and watch the robot follow it in real time
 - [ ] For milling operations, the toolpath line changes color while the tool is in contact with the work body (e.g. cutting a hole), reflecting depth of engagement
 - [ ] Each operation shows distinct start/end points on the trajectory
 - [ ] User can see an operations tree ordered by sequence, showing per-operation timing
@@ -93,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-14 after Phase 2: g-code-import-static-toolpath*
+*Last updated: 2026-08-15 after Phase 4: playback-engine*
