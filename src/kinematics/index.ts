@@ -31,6 +31,8 @@ export {
   clampRailPosition,
   resolveRailPosition,
   RAIL_RESOLUTION_CANDIDATES,
+  MODE_RAIL_START_OFFSET_M,
+  railStartXForMode,
 } from './rail';
 
 export {
