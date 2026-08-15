@@ -49,7 +49,8 @@ findings:
   warning: 3
   info: 1
   total: 5
-status: issues_found
+  critical_fixed: 1
+status: partially_fixed
 ---
 
 # Phase 04: Code Review Report
@@ -57,7 +58,7 @@ status: issues_found
 **Reviewed:** 2026-08-15T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 38
-**Status:** issues_found
+**Status:** partially_fixed (CR-01 fixed in `f6ebf05`; WR-01/WR-02/WR-03/IN-01 deferred by user decision)
 
 ## Summary
 
@@ -67,7 +68,7 @@ That said, tracing the async data flow between `cellStore.selectSample`, `CellSc
 
 ## Critical Issues
 
-### CR-01: Rail carriage visibly snaps to `RAIL_CENTER_X` on every sample reselection (including every mode switch)
+### CR-01: Rail carriage visibly snaps to `RAIL_CENTER_X` on every sample reselection (including every mode switch) — FIXED in `f6ebf05`
 
 **File:** `src/scene/CellScene.tsx:76`
 ```ts
