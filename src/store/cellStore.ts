@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { GCODE_SAMPLES } from '../gcode/samples'
 import { parseToolpath, type ParsedToolpath } from '../gcode/parseToolpath'
+import { toolpathAnchorForMode } from '../gcode/toolpath-anchor'
 import { compileTrajectory, type CompiledTrajectory } from '../trajectory/compile'
+import { useUiShellStore } from './uiShellStore'
 
 /**
  * Minimal, coarse-cadence Zustand store — the shape Phases 5-8 extend.
@@ -181,13 +183,26 @@ export const useCellStore = create<CellState>((set, get) => ({
       scrubFraction: 0,
     })
 
+    // G-04-1 gap closure: resolve the anchor from the cell's mode BEFORE the
+    // first await, so it reflects the mode as it was when this selection was
+    // dispatched rather than whatever it drifted to during the fetch. Read
+    // via getState() (never a subscription) — this store is not a React
+    // component and must not acquire one. `parseToolpath` itself is pure and
+    // must not know about UI state, so this store — the one component that
+    // already orchestrates fetch, parse and compile for a selection — is
+    // where the cell's current configuration is resolved into a world-space
+    // station. A mode change during an in-flight load dispatches its own
+    // selection through `useCellModeSampleSync`, and the request-id guard
+    // below already discards any selection this one supersedes.
+    const anchor = toolpathAnchorForMode(useUiShellStore.getState().cellMode)
+
     try {
       const response = await fetch(sample.filePath)
       if (!response.ok) {
         throw new Error(`Failed to fetch ${sample.filePath}: ${response.status}`)
       }
       const gcodeText = await response.text()
-      const toolpath = parseToolpath(gcodeText)
+      const toolpath = parseToolpath(gcodeText, anchor)
       // Stale-response guard (T-02-10): if a newer selectSample call has
       // started since this one began, this response is superseded — discard
       // it rather than stamping a newer selection with an older result. A
