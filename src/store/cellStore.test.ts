@@ -283,3 +283,45 @@ describe('useCellStore — selectSample stale-response guard (T-02-10)', () => {
     expect(useCellStore.getState().toolpath).toBe(millToolpath)
   })
 })
+
+describe('useCellStore — selectSample resets scrub position on every branch (04-REVIEW WR-01)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  beforeEach(() => {
+    // Seed a non-zero scrub position, as if a prior sample had been
+    // scrubbed partway through, so each branch below can prove it actually
+    // resets rather than merely starting from an already-zero value.
+    useCellStore.setState({ scrubFraction: 0.6, livePlayback: { fraction: 0.6 } })
+  })
+
+  it('an unknown sampleId resets both scrub channels to 0 alongside the error status', async () => {
+    await useCellStore.getState().selectSample('does-not-exist')
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('error')
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+
+  it('entering the parsing state resets both scrub channels to 0 before the fetch resolves', () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {})) // never resolves
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    void useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('parsing')
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+
+  it('a fetch/parse failure resets both scrub channels to 0 alongside the error status', async () => {
+    const fetchMock = vi.fn(() => Promise.reject(new Error('network error')))
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch)
+
+    await useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('error')
+    expect(useCellStore.getState().scrubFraction).toBe(0)
+    expect(useCellStore.getState().livePlayback.fraction).toBe(0)
+  })
+})

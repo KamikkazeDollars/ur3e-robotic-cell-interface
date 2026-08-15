@@ -153,22 +153,32 @@ export const useCellStore = create<CellState>((set, get) => ({
 
     const sample = GCODE_SAMPLES.find((candidate) => candidate.id === sampleId)
     if (!sample) {
+      // Reset both scrub channels here too (not just the success path below)
+      // so an unknown sampleId can't leave the marker/robot pose parked at a
+      // stale fraction left over from whatever was selected before.
+      get().livePlayback.fraction = 0
       set({
         selectedSampleId: sampleId,
         toolpathLoadStatus: 'error',
         toolpath: null,
         trajectory: null,
         isPlaying: false,
+        scrubFraction: 0,
       })
       return
     }
 
+    // Same reset on entering 'parsing': the previous sample's trajectory is
+    // being torn down (toolpath/trajectory: null above), so its scrub
+    // position must go with it rather than surviving into the new load.
+    get().livePlayback.fraction = 0
     set({
       selectedSampleId: sampleId,
       toolpathLoadStatus: 'parsing',
       toolpath: null,
       trajectory: null,
       isPlaying: false,
+      scrubFraction: 0,
     })
 
     try {
@@ -201,7 +211,8 @@ export const useCellStore = create<CellState>((set, get) => ({
       // Same discard on the failure path: a slow failure must not stamp an
       // error status over a newer selection that already succeeded.
       if (requestId !== selectSampleRequestId) return
-      set({ toolpathLoadStatus: 'error', toolpath: null, trajectory: null, isPlaying: false })
+      get().livePlayback.fraction = 0
+      set({ toolpathLoadStatus: 'error', toolpath: null, trajectory: null, isPlaying: false, scrubFraction: 0 })
     }
   },
 }))
