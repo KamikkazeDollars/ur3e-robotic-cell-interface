@@ -88,3 +88,37 @@ describe('relativeLuminance / contrastRatio', () => {
     expect(() => relativeLuminance('#fff')).toThrow()
   })
 })
+
+// Scan behavior (Task 2): every scene component that paints structural
+// surfaces must source its colors from SCENE_PALETTE, never declare a
+// literal of its own. A future component added to this guarantee is a
+// one-line addition to REWIRED_SCENE_FILES.
+const REWIRED_SCENE_FILES = [
+  'src/scene/RailRig.tsx',
+  'src/scene/Workbench.tsx',
+  'src/scene/CellScene.tsx',
+  'src/scene/NavCube.tsx',
+]
+
+/** Strips block comments, then line comments, from a TS/TSX source string.
+ * Order matters: stripping block comments first prevents a `//` inside a
+ * `/* ... *\/` block from truncating the scan early. */
+function stripComments(source: string): string {
+  const withoutBlockComments = source.replace(/\/\*[\s\S]*?\*\//g, '')
+  return withoutBlockComments.replace(/\/\/.*$/gm, '')
+}
+
+describe('scene components source colors from SCENE_PALETTE, not literals', () => {
+  for (const relativePath of REWIRED_SCENE_FILES) {
+    it(`${relativePath} contains no six-digit color literal outside comments`, () => {
+      const source = readFileSync(join(process.cwd(), relativePath), 'utf8')
+      const stripped = stripComments(source)
+      expect(stripped.match(/#[0-9a-fA-F]{6}/g)).toBeNull()
+    })
+
+    it(`${relativePath} imports SCENE_PALETTE`, () => {
+      const source = readFileSync(join(process.cwd(), relativePath), 'utf8')
+      expect(source).toMatch(/import\s*\{[^}]*\bSCENE_PALETTE\b[^}]*\}\s*from\s*['"].*scene-palette['"]/)
+    })
+  }
+})

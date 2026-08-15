@@ -3,10 +3,10 @@ import {
   TOOLPATH_ANCHOR_OFFSET,
   WORKBENCH_TOP_Y,
 } from '../gcode/toolpath-anchor'
+import { SCENE_PALETTE } from './scene-palette'
 
-// UI-SPEC Secondary tone (#E4E7EB) — the same tone RailRig.tsx and
-// CellScene.tsx's floor plane already use. No new color is introduced here.
-const SECONDARY_TONE = '#E4E7EB'
+// The bench is a deliberately distinct mid tone (SCENE_PALETTE.workbench),
+// chosen so the toolpath drawn on this surface stays readable against it.
 
 // Small explicit standoff beyond the carriage's own front face so the
 // tabletop's near edge can never touch the carriage — independent of
@@ -66,7 +66,7 @@ export default function Workbench() {
         castShadow
       >
         <boxGeometry args={[TABLETOP_WIDTH, TABLETOP_THICKNESS, TABLETOP_DEPTH]} />
-        <meshStandardMaterial color={SECONDARY_TONE} />
+        <meshStandardMaterial color={SCENE_PALETTE.workbench.hex} />
       </mesh>
 
       {LEG_X_OFFSETS.map((xOffset) =>
@@ -77,7 +77,7 @@ export default function Workbench() {
             castShadow
           >
             <boxGeometry args={[LEG_SECTION, LEG_HEIGHT, LEG_SECTION]} />
-            <meshStandardMaterial color={SECONDARY_TONE} />
+            <meshStandardMaterial color={SCENE_PALETTE.workbench.hex} />
           </mesh>
         )),
       )}

@@ -1,10 +1,9 @@
 import { RAIL_TRAVEL, RAIL_CENTER_X } from '../kinematics'
 import RobotModel from './RobotModel'
+import { SCENE_PALETTE } from './scene-palette'
 
-// UI-SPEC Secondary tone (#E4E7EB) — track, end-stops, and carriage recede
-// behind the robot; Accent is reserved for the nav cube and Reset View CTA
-// only. No new colors are introduced anywhere in this file.
-const SECONDARY_TONE = '#E4E7EB'
+// The rail hardware's tone is the palette's lightest structural tone
+// (SCENE_PALETTE.rail) — this file no longer declares any color of its own.
 
 // --- Cosmetic profile/clearance dimensions -------------------------------
 // None of these restate a rail *travel* bound (RAIL_TRAVEL.min/.max /
@@ -142,7 +141,7 @@ export default function RailRig({ railPos }: { railPos: number }) {
       {RAIL_Z_OFFSETS.map((z) => (
         <mesh key={z} position={[RAIL_CENTER_X, RAIL_PROFILE_HEIGHT / 2, z]} receiveShadow>
           <boxGeometry args={[TRACK_LENGTH, RAIL_PROFILE_HEIGHT, RAIL_PROFILE_WIDTH]} />
-          <meshStandardMaterial color={SECONDARY_TONE} />
+          <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
         </mesh>
       ))}
 
@@ -150,11 +149,11 @@ export default function RailRig({ railPos }: { railPos: number }) {
           anchor Phase 5's remaining-travel readout will be read against. */}
       <mesh position={[RAIL_TRAVEL.min, END_STOP_CENTER_Y, 0]} castShadow>
         <boxGeometry args={[END_STOP_WIDTH, END_STOP_HEIGHT, END_STOP_DEPTH]} />
-        <meshStandardMaterial color={SECONDARY_TONE} />
+        <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
       </mesh>
       <mesh position={[RAIL_TRAVEL.max, END_STOP_CENTER_Y, 0]} castShadow>
         <boxGeometry args={[END_STOP_WIDTH, END_STOP_HEIGHT, END_STOP_DEPTH]} />
-        <meshStandardMaterial color={SECONDARY_TONE} />
+        <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
       </mesh>
 
       {/* Carriage — X derived from the trajectory compiler's resolved rail
@@ -165,11 +164,11 @@ export default function RailRig({ railPos }: { railPos: number }) {
       <group position={[railPos, 0, 0]}>
         <mesh position={[0, CARRIAGE_BASE_CENTER_Y, 0]} castShadow>
           <boxGeometry args={[CARRIAGE_BASE_WIDTH, CARRIAGE_BASE_HEIGHT, CARRIAGE_BASE_DEPTH]} />
-          <meshStandardMaterial color={SECONDARY_TONE} />
+          <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
         </mesh>
         <mesh position={[0, CARRIAGE_BLOCK_CENTER_Y, 0]} castShadow>
           <boxGeometry args={[CARRIAGE_BLOCK_WIDTH, CARRIAGE_BLOCK_HEIGHT, CARRIAGE_BLOCK_DEPTH]} />
-          <meshStandardMaterial color={SECONDARY_TONE} />
+          <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
         </mesh>
         <group position={[0, CARRIAGE_TOP_Y, 0]}>
           <RobotModel />

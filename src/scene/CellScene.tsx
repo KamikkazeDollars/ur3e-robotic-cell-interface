@@ -11,11 +11,12 @@ import ScrubMarker from './ScrubMarker'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-defaults'
 import { RAIL_CENTER_X } from '../kinematics'
 import { useCellStore } from '../store/cellStore'
+import { SCENE_PALETTE } from './scene-palette'
 
-// UI-SPEC Dominant / Border tones — kept in sync with the DOM background (index.css)
-// so the WebGL canvas and the surrounding page chrome don't clash (D-06).
-const DOMINANT_TONE = '#1C1E21'
-const SECONDARY_TONE = '#3C4149'
+// Canvas clear color and floor tone are read from SCENE_PALETTE — kept in
+// sync with src/index.css by scene-palette.test.ts, not by hand, so the
+// WebGL canvas and the surrounding page chrome can never silently drift
+// apart (D-06).
 
 /**
  * R3F Canvas composition root — the phase's "one real route" analogue.
@@ -50,7 +51,7 @@ export default function CellScene() {
     <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%' }}>
       <Canvas
         gl={{ antialias: true }}
-        onCreated={({ gl }) => gl.setClearColor(DOMINANT_TONE)}
+        onCreated={({ gl }) => gl.setClearColor(SCENE_PALETTE.background.hex)}
         style={{ width: '100%', height: '100%', display: 'block' }}
       >
         <PerspectiveCamera makeDefault position={DEFAULT_CAMERA_POSITION} fov={45} />
@@ -74,7 +75,7 @@ export default function CellScene() {
           receiveShadow
         >
           <planeGeometry args={[RIG_FOOTPRINT_WIDTH, RIG_FOOTPRINT_DEPTH]} />
-          <meshStandardMaterial color={SECONDARY_TONE} side={DoubleSide} />
+          <meshStandardMaterial color={SCENE_PALETTE.floor.hex} side={DoubleSide} />
         </mesh>
 
         {/* Rail rig + UR3e mount point (plan 01-04): the 7th-axis rail with

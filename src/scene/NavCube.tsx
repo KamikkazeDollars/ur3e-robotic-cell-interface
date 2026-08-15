@@ -1,5 +1,6 @@
 import { Vector3 } from 'three'
 import { GizmoHelper, GizmoViewcube } from '@react-three/drei'
+import { SCENE_PALETTE } from './scene-palette'
 
 // `GizmoViewcube`'s own source (@react-three/drei/core/GizmoViewcube.js)
 // declares `defaultFaces = ['Right', 'Left', 'Top', 'Bottom', 'Front', 'Back']`
@@ -46,19 +47,20 @@ const AXIS_COLOR_Z = 0x0000ff // blue
  * Standard X=red/Y=green/Z=blue coloring is set explicitly per arrow to
  * match the "standard axis colors" ask.
  *
- * UI-SPEC Accent (#2563EB) is reserved for the cube's hover/active face
- * highlight only — it must not appear in the floor, lighting, or rail/robot
- * code. The axis triad's colors are the standard X/Y/Z convention, not the
- * UI-SPEC accent/secondary tones.
+ * SCENE_PALETTE.navCubeHover (the app's current accent) is reserved for the
+ * cube's hover/active face highlight only — it must not appear in the
+ * floor, lighting, or rail/robot code. The axis triad's colors are the
+ * standard X/Y/Z convention, not a UI-SPEC tone, and are left as literals
+ * on purpose (Task 2, gap closure G-03-6).
  */
 export default function NavCube() {
   return (
     <GizmoHelper alignment="top-right" margin={[80, 80]}>
       <GizmoViewcube
-        color="#FAFAFA"
-        strokeColor="#E4E7EB"
-        hoverColor="#2563EB"
-        textColor="#08060d"
+        color={SCENE_PALETTE.navCubeFace.hex}
+        strokeColor={SCENE_PALETTE.navCubeStroke.hex}
+        hoverColor={SCENE_PALETTE.navCubeHover.hex}
+        textColor={SCENE_PALETTE.navCubeText.hex}
         // G-02-04: 0.6 balances face-label legibility against letting the
         // Left/Bottom/Back axis triad read through the cube's near faces —
         // closes the "axis triad fully occluded by opaque faces" UAT report.
