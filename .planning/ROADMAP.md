@@ -129,7 +129,12 @@ Plans:
   1. User can press play and watch the UR3e animate continuously along the full toolpath in real time, synced to the visible trajectory line
   2. During playback, the trajectory highlight and TCP marker track the robot's current position smoothly, driven by an imperative render loop rather than per-frame React state updates
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Tracer: Play/Pause control drives a dual-cadence animation clock end-to-end, plus D-04 pause-on-drag
+- [ ] 04-02-PLAN.md — D-02 move-type-weighted timing (rapids traverse faster than cuts) on a published travel/toolpath length split
+- [ ] 04-03-PLAN.md — Shared interpolated sample lookup so the arm and scrub marker glide instead of stepping
 
 ### Phase 5: Telemetry / Dashboard
 
