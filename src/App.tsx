@@ -1,6 +1,7 @@
 import CellScene from './scene/CellScene'
 import ResetViewButton from './ui/ResetViewButton'
 import SampleSelect from './ui/SampleSelect'
+import PlaybackControl from './ui/PlaybackControl'
 import ScrubControl from './ui/ScrubControl'
 import SceneStatusOverlay from './ui/SceneStatusOverlay'
 import TabRail from './ui/shell/TabRail'
@@ -36,6 +37,7 @@ function App() {
         }}
       >
         <SampleSelect />
+        <PlaybackControl />
         <ScrubControl />
       </div>
       <div

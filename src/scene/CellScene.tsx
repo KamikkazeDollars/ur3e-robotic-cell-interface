@@ -12,6 +12,16 @@ import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from './camera-default
 import { RAIL_CENTER_X } from '../kinematics'
 import { useCellStore } from '../store/cellStore'
 import { SCENE_PALETTE } from './scene-palette'
+import usePlaybackClock from '../playback/usePlaybackClock'
+
+/** Renders nothing — exists purely to run `usePlaybackClock`'s `useFrame`
+ * side effect inside the `<Canvas>` tree (Phase 4, plan 04-01), the same
+ * "renders nothing, drives per-frame state imperatively" tier `ScrubMarker`
+ * occupies for its own mesh. */
+function PlaybackClock() {
+  usePlaybackClock()
+  return null
+}
 
 // Canvas clear color and floor tone are read from SCENE_PALETTE — kept in
 // sync with src/index.css by scene-palette.test.ts, not by hand, so the
@@ -28,8 +38,11 @@ import { SCENE_PALETTE } from './scene-palette'
  *      02-01, mounted after the workbench, before OrbitControls) ->
  *      ScrubMarker (plan 03-03, D-07 current-scrub-position indicator —
  *      mounted immediately after Toolpath since it rides that same drawn
- *      line, still before OrbitControls) -> OrbitControls (makeDefault) ->
- *      NavCube -> CameraResetListener
+ *      line, still before OrbitControls) -> PlaybackClock (plan 04-01,
+ *      renders nothing, exists to run usePlaybackClock's useFrame side
+ *      effect — mounted immediately after ScrubMarker, the same
+ *      "renders nothing" tier, still before OrbitControls) ->
+ *      OrbitControls (makeDefault) -> NavCube -> CameraResetListener
  *   -> ToolpathCameraFit (plan 02-03, mounted after CameraResetListener —
  *      D-05's toolpath fit is a distinct behaviour from the Reset View
  *      default framing the listener restores)
@@ -101,6 +114,10 @@ export default function CellScene() {
             the toolpath above, driven from the same trajectory sample index
             that poses the robot (SIM-05). */}
         <ScrubMarker />
+
+        {/* Plan 04-01: runs usePlaybackClock's useFrame side effect —
+            renders nothing, drives livePlayback.fraction/scrubFraction. */}
+        <PlaybackClock />
 
         <OrbitControls makeDefault target={DEFAULT_CAMERA_TARGET} />
         <NavCube />

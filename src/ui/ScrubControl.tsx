@@ -58,6 +58,8 @@ export default function ScrubControl() {
   const scrubFraction = useCellStore((state) => state.scrubFraction)
   const setScrubFraction = useCellStore((state) => state.setScrubFraction)
   const trajectory = useCellStore((state) => state.trajectory)
+  const pause = useCellStore((state) => state.pause)
+  const isPlaying = useCellStore((state) => state.isPlaying)
 
   const disabled = !trajectory || trajectory.samples.length === 0
   const percent = Math.round(scrubFraction * 100)
@@ -79,7 +81,16 @@ export default function ScrubControl() {
         step={0.01}
         value={scrubFraction}
         disabled={disabled}
-        onChange={(event) => setScrubFraction(Number(event.target.value))}
+        onChange={(event) => {
+          // D-04: dragging the slider while playback is running immediately
+          // pauses and seeks, in one gesture. This pause lives HERE, not in
+          // setScrubFraction — the playback clock's own throttled sync also
+          // calls setScrubFraction roughly every 80ms, so a setter that
+          // stopped playback would make a running clock stop itself within
+          // one throttle interval of starting (Pitfall 4).
+          if (isPlaying) pause()
+          setScrubFraction(Number(event.target.value))
+        }}
         style={rangeStyle}
       />
       {disabled && (
