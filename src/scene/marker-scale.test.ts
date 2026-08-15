@@ -9,6 +9,7 @@ import {
   MIN_MARKER_RADIUS,
   MAX_MARKER_RADIUS,
   SCRUB_MARKER_SCALE,
+  MIN_SCRUB_MARKER_DIAMETER_FRACTION,
   GUIDE_STEM_RADIUS_RATIO,
   GUIDE_FOOTPRINT_RADIUS_RATIO,
   MIN_MARKER_CONTRAST,
@@ -114,6 +115,16 @@ describe('scrubMarkerRadiusFromBounds', () => {
       markerRadiusFromBounds(bounds) * SCRUB_MARKER_SCALE,
       10,
     )
+  })
+})
+
+describe('scrub marker clears the legibility floor (gap closure G-04-1)', () => {
+  it('the rendered diameter is at least MIN_SCRUB_MARKER_DIAMETER_FRACTION of the toolpath span, for both bundled samples and a mid-range span', () => {
+    for (const span of [0.15, 0.12, (0.15 + 0.12) / 2]) {
+      const bounds = boundsForSpan(span)
+      const diameter = scrubMarkerRadiusFromBounds(bounds) * 2
+      expect(diameter).toBeGreaterThanOrEqual(largestSpan(bounds) * MIN_SCRUB_MARKER_DIAMETER_FRACTION)
+    }
   })
 })
 

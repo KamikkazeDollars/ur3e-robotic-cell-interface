@@ -32,8 +32,28 @@ export const MAX_MARKER_RADIUS = 0.01
  * multiplies the endpoint radius rather than being an independent clamp,
  * so the scrub-vs-endpoint size hierarchy holds by construction at every
  * toolpath scale, not because two separately chosen constants happen to be
- * ordered correctly today. */
-export const SCRUB_MARKER_SCALE = 1.75
+ * ordered correctly today.
+ *
+ * Gap closure G-04-1 (04-UAT.md): raised from 1.75 to 3.5. At 1.75, the
+ * marker rendered at roughly a five-millimetre radius against a path whose
+ * largest span is about 150mm, swept in ten seconds — legible while
+ * dragging the slider by hand, but reported as invisible during a
+ * full-speed autoplay run. The construction that guarantees the scrub
+ * marker stays strictly larger than the endpoint markers is unchanged: it
+ * still multiplies `markerRadiusFromBounds` rather than clamping
+ * independently — see `MIN_SCRUB_MARKER_DIAMETER_FRACTION` below for the
+ * asserted legibility floor this multiplier must clear. */
+export const SCRUB_MARKER_SCALE = 3.5
+
+/** Legibility floor (gap closure G-04-1): the scrub marker's rendered
+ * DIAMETER must be at least this fraction of the toolpath's own largest
+ * axis span, asserted in `marker-scale.test.ts` rather than trusted from
+ * `SCRUB_MARKER_SCALE`'s literal value alone — the same "assert the
+ * property rather than trust the literal" discipline `MIN_MARKER_CONTRAST`
+ * already establishes in this file. A future edit that lowers
+ * `SCRUB_MARKER_SCALE` below what this floor allows fails a test instead of
+ * silently shipping a marker too small to follow by eye during autoplay. */
+export const MIN_SCRUB_MARKER_DIAMETER_FRACTION = 0.12
 
 /** The vertical guide stem's radius, as a fraction of the marker radius it
  * sits beneath — thinner than the marker itself, so the marker reads as
