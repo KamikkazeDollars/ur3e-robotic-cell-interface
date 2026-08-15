@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 04-playback-engine
 source: [04-VERIFICATION.md]
 started: 2026-08-15T17:45:00Z
-updated: 2026-08-15T18:35:00Z
+updated: 2026-08-15T20:15:00Z
 ---
 
 ## Current Test
@@ -34,8 +34,8 @@ result: pass
 ## Summary
 
 total: 4
-passed: 2
-issues: 1
+passed: 3
+issues: 0
 pending: 0
 skipped: 1
 blocked: 0
@@ -44,7 +44,17 @@ blocked: 0
 
 - gap_id: G-04-1
   truth: "The UR3e and rail carriage animate continuously along the whole toolpath; the teal marker rides the line in step with the flange."
-  status: failed
+  status: resolved
+  resolution: |
+    Closed by gap-closure plans 04-04 (traversed-path highlight + legible scrub
+    marker + PlaybackClock mount-order fix), 04-05 (mode-tagged samples +
+    mode-filtered picker), and 04-06 (per-mode rail station: printing 0.6m right
+    of centre, milling 0.6m left, workbench travels with it). 04-06's blocking
+    human-verification checkpoint went two rounds: round 1 found a real
+    regression (mode-switch reselection forced a tight camera zoom instead of
+    the wide rail-sweep framing), fixed in commit 8cf0c43 and re-verified; round
+    2 the user replied "approved". Independently re-verified by 04-VERIFICATION.md
+    (22/22 must-haves passed, full 1054-test suite green).
   reason: "User reported: Well the rail carriage dosen't move in any g-code sample so it's not checkable if will work. There isn't any teal line visible on the page while and after the animation is running. The UR3e robot does what's intended to do. Let's modify some things. Make the robot start from the right side of the rig (the distance from the center is to your decision) and left side for milling. In this way the rig rail has a motive for being there. Let's do other modifications. Let the user choose only the g-code sample for printing when the printing tab is on, and the same for milling."
   severity: major
   test: 1

@@ -1,48 +1,34 @@
 ---
 phase: 04-playback-engine
-verified: 2026-08-15T17:45:00Z
-status: human_needed
-score: 18/20 must-haves verified
-behavior_unverified: 2
+verified: 2026-08-15T20:15:00Z
+status: passed
+score: 22/22 must-haves verified
+behavior_unverified: 0
 overrides_applied: 0
 re_verification:
-  previous_status: gaps_found
-  previous_score: 17/20
+  previous_status: human_needed
+  previous_score: 18/20
   gaps_closed:
-    - "selectSample leaves isPlaying false and livePlayback.fraction at 0 on every one of its store writes, so choosing a new sample mid-playback stops the clock instead of animating a stale position against a fresh trajectory (04-01-PLAN.md must_haves.truths)."
+    - "SC1/SC2 visual continuity — the previous verification's 2 PRESENT_BEHAVIOR_UNVERIFIED truths (continuous synced playback; smooth highlight/marker tracking) are now resolved by completed human UAT (04-UAT.md) plus the 04-06 blocking checkpoint's round-2 'approved' reply, after G-04-1's three gap-closure plans (traversed-path highlight, mode-filtered sample picker, per-mode rail station) were built and verified."
+    - "G-04-1 (04-UAT.md test 1, major severity): no visible trajectory highlight, rail carriage never exercised off-centre, no per-mode sample filtering — closed by 04-04-PLAN.md, 04-05-PLAN.md, 04-06-PLAN.md; human-verified 'approved' after one checkpoint round of camera-framing fix (commit 8cf0c43)."
+    - "CR-01 (04-REVIEW.md, critical): rail carriage snapped to hardcoded RAIL_CENTER_X during the async gap between reselection and trajectory compile — fixed in commit f6ebf05 (lastRailPos tracking), full suite green after fix."
   gaps_remaining: []
   regressions: []
-deferred: []
-behavior_unverified_items:
-  - truth: "User can press play and watch the UR3e animate continuously along the full toolpath in real time, synced to the visible trajectory line (ROADMAP Phase 4 Success Criterion 1)."
-    test: "Run `npm run dev`, select a bundled sample, press Play."
-    expected: "The UR3e and its rail carriage animate continuously from the parked pose along the whole toolpath with no visible stepping or stutter, the teal scrub marker rides the drawn line in step with the flange, the slider handle and percentage readout advance while it runs, and the button shows a pause icon while running and a play icon once the run completes."
-    why_human: "Continuous, stutter-free visual motion and 'synced to the visible trajectory line' are runtime-rendering qualities no headless Vitest assertion can observe — this project's test environment has no jsdom/RTL/WebGL rendering harness. The underlying state machine (fraction reaches 1, monotonic, isPlaying returns to false) IS covered by a headless test (src/playback/clock-step.test.ts's 'a full play run...' case using a real compiled trajectory), but that test uses UNIFORM_FRACTION_MAPPING rather than the production buildDurationMapping (04-REVIEW.md WR-03), so the exact production integration is not exercised end-to-end by any automated test either."
-  - truth: "During playback, the trajectory highlight and TCP marker track the robot's current position smoothly, driven by an imperative render loop rather than per-frame React state updates (ROADMAP Phase 4 Success Criterion 2)."
-    test: "Load a sample, press Play, and watch the arm and the teal scrub marker while the run plays; then pause and drag the slider slowly end to end."
-    expected: "The arm and the marker move smoothly and continuously with no per-sample ticking or stair-stepping; the marker stays on the drawn toolpath and the flange stays on the marker throughout."
-    why_human: "The 'imperative render loop rather than per-frame React state' architectural half of this criterion IS statically verified — RobotPose.tsx and ScrubMarker.tsx both read trajectory/livePlayback via useCellStore.getState() inside useFrame (never a reactive selector for the per-frame position), and livePlayback is a referentially-stable object mutated by direct property assignment, confirmed never replaced via set() (unit-tested). Only the 'smoothly'/'no stepping' visual-continuity half of the claim remains unverifiable without rendering the scene."
-human_verification:
-  - test: "Run `npm run dev`, select a bundled sample, press Play."
-    expected: "The UR3e and rail carriage animate continuously along the whole toolpath, holding the final pose at the end; the marker rides the line in step with the flange; the slider and percentage readout advance live; the button icon toggles Play/Pause correctly."
-    why_human: "Visual animation smoothness and cross-component sync cannot be confirmed by this project's Vitest suite (no jsdom/rendering harness)."
-  - test: "With a sample loaded, press Play, then drag the scrub slider while the robot is moving."
-    expected: "Playback stops immediately at the dragged position, the button returns to the play icon, and the robot stays where the drag left it until Play is pressed again (D-04)."
-    why_human: "The actual drag-to-pause gesture and its visual seek result require in-browser interaction."
-  - test: "Load the milling sample and press Play."
-    expected: "The robot covers the non-cutting positioning moves noticeably faster than the cutting passes, and the whole run still finishes in about ten seconds — the same total as the printing sample (D-02)."
-    why_human: "Relative visual traverse speed and perceived total duration are not assertable from a headless unit test."
-  - test: "Load a sample and press Play; then pause and drag the slider slowly end to end."
-    expected: "The arm and marker move smoothly and continuously with no per-step ticking during playback; the marker stays on the drawn toolpath and the flange stays on the marker throughout manual scrubbing, matching Phase 3's behaviour."
-    why_human: "Continuous joint-space-blended motion quality and marker/flange visual agreement require rendering the scene."
+deferred:
+  - truth: "D-02 rapid-vs-cut visual pacing feels right at full playback speed (04-UAT.md test 3)"
+    addressed_in: "explicit user decision, deferred_at 2026-08-15 (04-UAT.md 'Deferred Follow-Ups')"
+    evidence: "User: 'Mostly pass, but it seems that it's moving too fast for now but it's mostly a visual problem, no need to fix now just note for when the complete version of the product is done.' Not a Phase 4 blocker; mechanism (RAPID_SPEED_WEIGHT > CUT_SPEED_WEIGHT, monotonic weighted mapping) remains unit-verified regardless of the deferred tuning."
+  - truth: "WR-01 (duration-mapping.ts independently re-sums arc length instead of reusing compile.ts's own table), WR-02 (SampleSelect one-render stale <select> value after a mode switch), WR-03 (frozen-at-unreachable trajectory gives no timing cue), IN-01 (unsafe tuple cast in blendJoints)"
+    addressed_in: "04-REVIEW.md — deferred by explicit user decision"
+    evidence: "04-REVIEW.md frontmatter: 'WR-01/WR-02/WR-03/IN-01 deferred by user decision'; none of the four affects either bundled sample's demonstrable path (confirmed empirically in the prior verification pass: both samples compile 'ready', never 'frozen-at-unreachable')."
 ---
 
 # Phase 4: Playback Engine Verification Report
 
-**Phase Goal:** Users can press play and watch the UR3e execute the full toolpath in real time, completing the "must not fail" core simulation before any secondary tab work begins
-**Verified:** 2026-08-15T17:45:00Z
-**Status:** human_needed
-**Re-verification:** Yes — after gap closure (commit `d93b93a`, "fix(04): reset scrub position on every selectSample() branch")
+**Phase Goal:** Users can press play and watch the UR3e execute the full toolpath in real time, completing the "must not fail" core simulation before any secondary tab work begins.
+**Verified:** 2026-08-15T20:15:00Z
+**Status:** passed
+**Re-verification:** Yes — after gap closure (G-04-1: plans 04-04/04-05/04-06) and a post-hoc code review with one critical fix (CR-01, commit `f6ebf05`)
 
 ## Goal Achievement
 
@@ -50,143 +36,138 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | SC1 (roadmap): Press Play animates UR3e continuously along the full toolpath in real time, synced to the trajectory line | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | Wired end-to-end (PlaybackControl → store → usePlaybackClock → RobotPose/ScrubMarker); headless test (`clock-step.test.ts`) proves the state machine reaches fraction 1 monotonically and terminates correctly on a real compiled trajectory, but visual continuity/"synced to the line" is a rendering quality no test observes, and that same headless test uses `UNIFORM_FRACTION_MAPPING`, not the production `buildDurationMapping` (WR-03) |
-| 2 | SC2 (roadmap): trajectory highlight/TCP marker track position smoothly, via imperative loop not per-frame React state | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | Architecture half VERIFIED by code (both components read `livePlayback` via `getState()` inside `useFrame`, never a reactive selector for the per-frame position; `livePlayback` object identity confirmed stable by unit test); "smoothly" is a rendering quality requiring visual confirmation |
-| 3 | `PLAYBACK_TOTAL_DURATION_SECONDS` is exactly 10, a single module constant (D-01) | ✓ VERIFIED | `src/playback/clock-step.ts:15`; asserted in `clock-step.test.ts` |
-| 4 | `stepClock` clamps delta to `MAX_FRAME_DELTA_S` (0.1s), coerces non-finite/negative delta to 0 | ✓ VERIFIED | `clock-step.ts:111-113`; unit-tested for 5s, NaN, and negative-delta cases |
-| 5 | `stepClock` reports `finished`/`fraction===1` at total duration; `usePlaybackClock` calls `pause()` on that frame (D-06) | ✓ VERIFIED | `clock-step.ts:118-121`, `usePlaybackClock.ts:76-82`; headless run test asserts final fraction is 1 and `isPlaying` is false after finishing |
-| 6 | `resumeElapsedSeconds` resumes from current `scrubFraction` (D-05) and restarts near-1 via `RESUME_EPSILON`, never exact equality (D-07) | ✓ VERIFIED | `clock-step.ts:77-82`; unit-tested at 0.5, 1, 0.9999997, NaN |
-| 7 | `livePlayback` is referentially stable across `play()`/`pause()`/`setScrubFraction()` | ✓ VERIFIED | `cellStore.ts:149`; asserted with `toBe` identity in both `clock-step.test.ts` and `cellStore.test.ts` |
-| 8 | `setScrubFraction` writes the same clamped value into both `scrubFraction` and `livePlayback.fraction`; NaN/Infinity → 0 | ✓ VERIFIED | `cellStore.ts:138-145`; unit-tested for 0.42, NaN, Infinity, -1, 2 |
-| 9 | `setScrubFraction` never touches `isPlaying` (Pitfall 4 — the clock's own throttled sync cannot pause itself) | ✓ VERIFIED | `cellStore.ts:138-145` (no `isPlaying` write); "Pitfall 4 guard" test in `cellStore.test.ts:164-168` |
-| 10 | `selectSample` leaves `isPlaying` false AND `livePlayback.fraction` at 0 on every one of its store writes | ✓ VERIFIED (re-checked) | **Closed by commit `d93b93a`.** `src/store/cellStore.ts` now resets both `get().livePlayback.fraction = 0` and `scrubFraction: 0` at all four `set()` sites inside `selectSample`: the unknown-sample branch (line 159 + 166), the "start parsing" branch (line 174 + 181), the success branch (line 207 + 208, unchanged), and the catch/error branch (line 214 + 215). Three new regression tests in `cellStore.test.ts`'s "`useCellStore — selectSample resets scrub position on every branch (04-REVIEW WR-01)`" block seed a non-zero `scrubFraction`/`livePlayback.fraction` (0.6) and assert both read back 0 after each of the unknown-sample, parsing-start (via a never-resolving stubbed `fetch`), and fetch-failure branches. Re-ran `npx vitest run src/store/cellStore.test.ts` (139/139 pass, up from 129) and the full suite (`npx vitest run`, 976/976 pass, up from 973), `npx tsc -b` clean, `npm run build` clean. |
-| 11 | A headless run seeding a real `compileTrajectory` output, calling `play()`, and stepping at 1/60s reaches fraction 1, is monotonic, and ends `isPlaying=false` | ✓ VERIFIED | `clock-step.test.ts` "a full play run reaches fraction 1..." — passes against a real square-toolpath fixture |
-| 12 | No module under `src/playback/` solves inverse kinematics | ✓ VERIFIED | `! grep -rq 'solveUR6IK' src/playback/` succeeds |
-| 13 | D-04: dragging the scrub slider mid-playback pauses immediately, then seeks | ✓ VERIFIED (mechanism) / visual seek is human item | `ScrubControl.tsx:91-92` calls `pause()` before `setScrubFraction`; Pitfall 4 test confirms the setter itself cannot self-pause |
-| 14 | `CompiledTrajectory.travelLength + toolpathLength` equals the total arc length used to derive `scrubFraction` | ✓ VERIFIED | `compile.ts:299-301`; boundary-fraction assertion in `compile.test.ts` within 1e-9 (toolpath half) / documented 5mm bound (travel half, discretization) |
-| 15 | D-02: rapid segment consumes strictly less playback time than an equal-length cut segment; `RAPID_SPEED_WEIGHT > CUT_SPEED_WEIGHT` | ✓ VERIFIED | `duration-mapping.ts:27-28`; hand-computed Fixture A/B tests in `duration-mapping.test.ts` |
-| 16 | `buildDurationMapping`'s mapping is monotonic, exactly anchored at 0/1, round-trips within 1e-9, finite for degenerate input | ✓ VERIFIED | `duration-mapping.test.ts` — monotonic sweep, boundary exactness, round-trip, 4 degenerate cases, all passing |
-| 17 | `usePlaybackClock` builds its mapping via `buildDurationMapping(toolpath, trajectory)`, rebuilt only on toolpath identity change | ✓ VERIFIED | `usePlaybackClock.ts:5,45-47` |
-| 18 | `sampleAtFraction`: exact endpoints at 0/1, span-weighted interior blend, ratio clamp so a truncated trajectory returns its last solved sample (no extrapolation) | ✓ VERIFIED | `sample-lookup.ts:93-117`; 16 unit tests including truncated-fixture and real-compiled-trajectory density check |
-| 19 | `sampleAtFraction` returns `null` for empty `samples`; finite output for NaN/Infinity/out-of-range fraction | ✓ VERIFIED | `sample-lookup.ts:95,98-99`; unit-tested |
-| 20 | `RobotPose`/`ScrubMarker` both call `sampleAtFraction` on the same `livePlayback.fraction`; neither retains its own index derivation | ✓ VERIFIED | `RobotPose.tsx:54`, `ScrubMarker.tsx:80`; `! grep -q 'rawIndex'` succeeds on both files |
+| 1 | **SC1 (roadmap):** Press Play animates the UR3e continuously along the full toolpath in real time, synced to the visible trajectory line | ✓ VERIFIED | Mechanism: `usePlaybackClock.ts` drives `stepClock`/`buildDurationMapping`, writing `livePlayback.fraction` every frame; `RobotPose.tsx`/`ScrubMarker.tsx`/`PlaybackTrail.tsx` all read it via `sampleAtFraction`. Visual: original UAT test 1 (04-UAT.md) found the robot's own motion already correct ("The UR3e robot does what's intended to do") but flagged the missing trajectory highlight as unreadable — closed by 04-04-PLAN.md's `PlaybackTrail`. Re-verified live via the 04-06 Task 3 blocking checkpoint (`npm run dev`, Play, both samples), human reply **"approved"** on round 2 (04-06-SUMMARY.md D4). |
+| 2 | **SC2 (roadmap):** Trajectory highlight + TCP marker track position smoothly, via an imperative render loop, not per-frame React state | ✓ VERIFIED | Architecture: `RobotPose.tsx`, `ScrubMarker.tsx`, `PlaybackTrail.tsx` all read `livePlayback` through `useCellStore.getState()` inside `useFrame` (never a reactive selector for per-frame position); `livePlayback` confirmed referentially stable by unit test (`cellStore.test.ts`). Visual: highlight-growth and marker-legibility explicitly re-confirmed in the 04-06 checkpoint items 3-4, "approved" round 2. |
+| 3 | `PLAYBACK_TOTAL_DURATION_SECONDS` is exactly 10, a single module constant (D-01) | ✓ VERIFIED | `src/playback/clock-step.ts:15`; `clock-step.test.ts` |
+| 4 | `stepClock` clamps delta to `MAX_FRAME_DELTA_S`, coerces non-finite/negative delta to 0 | ✓ VERIFIED | `clock-step.ts:111-113`; unit-tested |
+| 5 | `stepClock` reaches `finished`/`fraction===1` at total duration; clock pauses on that frame (D-06) | ✓ VERIFIED | `clock-step.ts:118-121`, `usePlaybackClock.ts:76-82`; headless run test |
+| 6 | `resumeElapsedSeconds` resumes from current fraction (D-05), restarts near-1 via epsilon not exact equality (D-07) | ✓ VERIFIED | `clock-step.ts:77-82`; unit-tested at 0.5, 1, 0.9999997, NaN |
+| 7 | `livePlayback` referentially stable across `play()`/`pause()`/`setScrubFraction()` | ✓ VERIFIED | `cellStore.ts:149`; `toBe` identity tests |
+| 8 | `setScrubFraction` writes the same clamped value into `scrubFraction` and `livePlayback.fraction`; NaN/Infinity → 0 | ✓ VERIFIED | `cellStore.ts:138-145`; unit-tested |
+| 9 | `setScrubFraction` never touches `isPlaying` (Pitfall 4) | ✓ VERIFIED | `cellStore.ts:138-145`; dedicated guard test |
+| 10 | `selectSample` resets `isPlaying`/`livePlayback.fraction`/`scrubFraction` on every one of its `set()` branches | ✓ VERIFIED | All four branches confirmed; regression tests in `cellStore.test.ts` |
+| 11 | `CompiledTrajectory.travelLength + toolpathLength` equals the arc length that derives `scrubFraction` | ✓ VERIFIED | `compile.ts:299-301`; assertion within 1e-9 |
+| 12 | D-02: rapid segment consumes strictly less playback time than an equal-length cut segment; `RAPID_SPEED_WEIGHT > CUT_SPEED_WEIGHT` | ✓ VERIFIED (mechanism); visual pacing deferred | `duration-mapping.ts:27-28`; hand-computed fixtures. Visual "feels right" tuning explicitly deferred by user (see `deferred` above) — not a blocker. |
+| 13 | `buildDurationMapping` monotonic, anchored at 0/1, round-trips within 1e-9, finite for degenerate input | ✓ VERIFIED | `duration-mapping.test.ts` |
+| 14 | `sampleAtFraction`: exact endpoints, span-weighted blend, ratio-clamped for truncated trajectories | ✓ VERIFIED | `sample-lookup.ts:93-117`; 16 unit tests |
+| 15 | `RobotPose`/`ScrubMarker` share the one `sampleAtFraction` call; neither retains a private index derivation | ✓ VERIFIED | `RobotPose.tsx:54`, `ScrubMarker.tsx:80`; `! grep -q 'rawIndex'` succeeds |
+| 16 | A traversed-path highlight grows from the toolpath's start fraction to 1 as playback advances, excludes the travel-move leg, and never runs ahead of the marker (G-04-1) | ✓ VERIFIED | `trail-progress.ts` (`buildTrailGeometry`, `traversedSegmentCount` — floors, never rounds); `PlaybackTrail.tsx` writes only `instanceCount`/`visible` per frame; 27 unit tests including a real-fixture no-overshoot check. Human-confirmed in 04-06 checkpoint item 3, "approved". |
+| 17 | The scrub marker clears a named legibility floor (`MIN_SCRUB_MARKER_DIAMETER_FRACTION`) for both bundled samples' spans | ✓ VERIFIED | `marker-scale.ts` (`SCRUB_MARKER_SCALE` 1.75→3.5); `marker-scale.test.ts` asserts the floor for both real sample spans |
+| 18 | `PlaybackClock` (the writer of `livePlayback.fraction`) mounts ahead of every per-frame reader in `CellScene.tsx` | ✓ VERIFIED | `CellScene.tsx:111` (`<PlaybackClock />` first inside `<Canvas>`, before `<RailRig>`, `<Toolpath>`, `<PlaybackTrail>`, `<ScrubMarker>`) — confirmed directly by reading the file; structurally guarded by `cell-scene-order.test.ts` |
+| 19 | Every `GCODE_SAMPLES` entry carries a mode; the picker offers only the active mode's samples; switching mode re-selects a matching sample (G-04-1) | ✓ VERIFIED | `src/gcode/samples.ts` (`samplesForMode`/`sampleMatchesMode`/`firstSampleIdForMode`, 9 unit tests); `SampleSelect.tsx:68-69` reads `samplesForMode(cellMode)`; `useCellModeSampleSync.ts` mounted in `App.tsx`. Human-confirmed in 04-06 checkpoint item 1, "approved". |
+| 20 | `railStartXForMode('printing')`/`('milling')` park the carriage symmetrically on opposite sides of `RAIL_CENTER_X`; both bundled samples resolve at least 0.5m off-centre per mode with joint-identical motion to the centred compile (G-04-1) | ✓ VERIFIED | `src/kinematics/rail.ts:85,106` (`MODE_RAIL_START_OFFSET_M = 0.6`, clamped via `clampRailPosition`); `src/trajectory/mode-rail.test.ts` — both samples `'ready'` under both mode anchors, joints within 1e-6 rad of centred compile. Human-confirmed in 04-06 checkpoint item 2, "approved" (round 2, after camera-framing fix). |
+| 21 | The rail carriage never falls back to a hardcoded `RAIL_CENTER_X` during the async gap between reselection and trajectory compile (04-REVIEW CR-01) | ✓ VERIFIED | Fixed in commit `f6ebf05`: `cellStore.ts` adds `lastRailPos`, written only on `selectSample`'s success branch; `CellScene.tsx:88` falls back to `state.lastRailPos`, never the constant. 97 lines of new regression tests in `cellStore.test.ts`; full suite green post-fix (confirmed independently in this pass: 1054/1054). |
+| 22 | The full Vitest suite, `tsc -b`, and `npm run build` are green at the current HEAD | ✓ VERIFIED | Ran independently in this verification pass: `npx tsc -b` clean; `npx vitest run` → 1054/1054 passing, 105 files; git working tree has no uncommitted changes to any tracked source file |
 
-**Score:** 18/20 truths verified (0 failed, 2 present + wired but behavior-unverified)
+**Score:** 22/22 truths verified (0 failed, 0 present-but-behavior-unverified)
+
+### Deferred Items
+
+| # | Item | Addressed In | Evidence |
+|---|------|-------------|----------|
+| 1 | D-02 rapid-vs-cut pacing "feels too fast" visually | Explicit user decision (04-UAT.md, deferred_at 2026-08-15) | User: "no need to fix now just note for when the complete version of the product is done" — not a Phase 4 blocker |
+| 2 | 04-REVIEW.md WR-01, WR-02, WR-03, IN-01 (3 warnings, 1 info) | Explicit user decision (04-REVIEW.md frontmatter: "deferred by user decision") | None affect either bundled sample's actual in-app path; WR-03's frozen-trajectory timing gap confirmed empirically in the prior verification pass to not apply to either bundled sample (both compile to `'ready'`, never `'frozen-at-unreachable'`) |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/playback/clock-step.ts` | Pure playback clock core | ✓ VERIFIED | Exports all required constants/functions; framework-free; 13 unit tests pass |
-| `src/playback/clock-step.test.ts` | D-01/05/06/07 unit coverage + headless run | ✓ VERIFIED | 13 tests, 2 describe blocks (pure clock behavior + headless end-to-end run) |
-| `src/playback/usePlaybackClock.ts` | R3F hook driving clock + dual-cadence writes | ✓ VERIFIED | Mounted via `PlaybackClock` leaf in `CellScene.tsx`; no dedicated test file (WR-03) |
-| `src/ui/PlaybackControl.tsx` | Play/Pause DOM control | ✓ VERIFIED | `variant="secondary"`, disabled with no trajectory, mounted in `App.tsx` |
-| `src/store/cellStore.ts` | `isPlaying`/`play`/`pause`/`livePlayback` surface | ✓ VERIFIED | Dual-cadence channel present and correctly wired for the play/pause/scrub paths; `selectSample`'s reset gap (WR-01) is now closed on all four branches |
-| `src/playback/duration-mapping.ts` | D-02 weighted mapping | ✓ VERIFIED | `RAPID_SPEED_WEIGHT`/`CUT_SPEED_WEIGHT`/`buildDurationMapping` all exported and unit-tested |
-| `src/playback/duration-mapping.test.ts` | Weighting/monotonicity/boundary/degenerate coverage | ✓ VERIFIED | 14 tests, all against hand-computable synthetic fixtures — never against a real `compileTrajectory` output (WR-03) |
-| `src/trajectory/compile.ts` | `travelLength`/`toolpathLength` on `CompiledTrajectory` | ✓ VERIFIED | Populated at both return sites; additive, no change to solved poses |
-| `src/trajectory/sample-lookup.ts` | Shared interpolated lookup | ✓ VERIFIED | `sampleAtFraction` exported, framework-free, 16 unit tests |
-| `src/trajectory/sample-lookup.test.ts` | Endpoint/blend/clamp/degenerate/density coverage | ✓ VERIFIED | All behavior-block items covered |
-| `src/scene/RobotPose.tsx` | Per-frame pose driver reading shared lookup | ✓ VERIFIED | `sampleAtFraction(trajectory, livePlayback.fraction)`, `toUrdfJointAngles` intact |
-| `src/scene/ScrubMarker.tsx` | Per-frame marker driver reading shared lookup | ✓ VERIFIED | Same lookup call; `scrubMarkerRadius` sizing intact |
+| `src/playback/clock-step.ts` | Pure playback clock core | ✓ VERIFIED | All constants/functions exported, framework-free |
+| `src/playback/usePlaybackClock.ts` | R3F hook driving clock + dual-cadence writes | ✓ VERIFIED | Mounted via `PlaybackClock` leaf, first in `CellScene.tsx` |
+| `src/ui/PlaybackControl.tsx` | Play/Pause DOM control | ✓ VERIFIED | Mounted in `App.tsx` |
+| `src/store/cellStore.ts` | `isPlaying`/`play`/`pause`/`livePlayback`/`lastRailPos` surface | ✓ VERIFIED | Dual-cadence channel + CR-01 fix present |
+| `src/playback/duration-mapping.ts` | D-02 weighted mapping | ✓ VERIFIED | `RAPID_SPEED_WEIGHT`/`CUT_SPEED_WEIGHT`/`buildDurationMapping` exported, unit-tested |
+| `src/trajectory/compile.ts` | `travelLength`/`toolpathLength` on `CompiledTrajectory` | ✓ VERIFIED | Populated at both return sites |
+| `src/trajectory/sample-lookup.ts` | Shared interpolated lookup | ✓ VERIFIED | `sampleAtFraction` exported, framework-free |
+| `src/scene/RobotPose.tsx` / `ScrubMarker.tsx` | Per-frame drivers reading shared lookup | ✓ VERIFIED | Both call `sampleAtFraction(trajectory, livePlayback.fraction)` |
+| `src/scene/trail-progress.ts` | Trail geometry/segment-count math | ✓ VERIFIED | `TrailGeometry`/`buildTrailGeometry`/`traversedSegmentCount` exported |
+| `src/scene/PlaybackTrail.tsx` | Traversed-path highlight component | ✓ VERIFIED | Mounted between `Toolpath` and `ScrubMarker`; per-frame writes only `instanceCount`/`visible` |
+| `src/scene/cell-scene-order.test.ts` | Structural mount-order guard | ✓ VERIFIED | Asserts `PlaybackClock` index < `RailRig`/`Toolpath`/`PlaybackTrail`/`ScrubMarker` indices |
+| `src/cell-mode.ts` | Dependency-free `CellMode` union | ✓ VERIFIED | No imports; re-exported from `uiShellStore.ts` |
+| `src/gcode/samples.ts` | Mode-tagged samples + filter helpers | ✓ VERIFIED | `samplesForMode`/`sampleMatchesMode`/`firstSampleIdForMode` exported |
+| `src/ui/useCellModeSampleSync.ts` | Mode-change reselection hook | ✓ VERIFIED | Mounted once in `App.tsx` |
+| `src/kinematics/rail.ts` | Per-mode rail station | ✓ VERIFIED | `MODE_RAIL_START_OFFSET_M`, `railStartXForMode` exported |
+| `src/gcode/toolpath-anchor.ts` | Mode-aware world-space anchor | ✓ VERIFIED | `toolpathAnchorForMode` exported |
+| `src/trajectory/mode-rail.test.ts` | End-to-end mode/rail proof | ✓ VERIFIED | Both samples `'ready'` under both anchors, joint-identical to centred compile |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| `usePlaybackClock.ts` | `cellStore.ts` | `useCellStore.getState()` inside `useFrame`, writes `livePlayback.fraction` every frame, `setScrubFraction` only on throttle tick | ✓ WIRED | Confirmed at `usePlaybackClock.ts:35-73` |
-| `RobotPose.tsx` | `cellStore.ts` | reads `livePlayback.fraction` inside `useFrame` | ✓ WIRED | `RobotPose.tsx:51,54` |
-| `ScrubMarker.tsx` | `cellStore.ts` | reads `livePlayback.fraction` inside `useFrame` | ✓ WIRED | `ScrubMarker.tsx:71,80` |
-| `CellScene.tsx` | `usePlaybackClock.ts` | `PlaybackClock` leaf mounted inside `<Canvas>` | ✓ WIRED | `CellScene.tsx:21-24,118-120` |
-| `App.tsx` | `PlaybackControl.tsx` | mounted in bottom-left overlay next to `ScrubControl` | ✓ WIRED | `App.tsx:4,40` |
-| `duration-mapping.ts` | `gcode/parseToolpath.ts` | reads `segment.type` per segment | ✓ WIRED | `duration-mapping.ts:131` |
-| `duration-mapping.ts` | `trajectory/compile.ts` | reads `travelLength`/`toolpathLength` | ✓ WIRED | `duration-mapping.ts:105-106` |
-| `usePlaybackClock.ts` | `duration-mapping.ts` | `buildDurationMapping(toolpath, trajectory)` assigned into mapping ref | ✓ WIRED | `usePlaybackClock.ts:46` |
-| `RobotPose.tsx` | `sample-lookup.ts` | `sampleAtFraction(...)` feeds `toUrdfJointAngles` | ✓ WIRED | `RobotPose.tsx:54,57` |
-| `ScrubMarker.tsx` | `sample-lookup.ts` | `sampleAtFraction(...)` feeds `mesh.position.set` | ✓ WIRED | `ScrubMarker.tsx:80,92` |
+| `usePlaybackClock.ts` | `cellStore.ts` | `getState()` inside `useFrame`, writes `livePlayback.fraction` every frame | ✓ WIRED | Confirmed |
+| `RobotPose.tsx` / `ScrubMarker.tsx` | `sample-lookup.ts` | `sampleAtFraction(trajectory, livePlayback.fraction)` | ✓ WIRED | Confirmed |
+| `PlaybackTrail.tsx` | `trail-progress.ts` | `traversedSegmentCount(trail, livePlayback.fraction)` → `geometry.instanceCount` | ✓ WIRED | Confirmed |
+| `CellScene.tsx` | `usePlaybackClock.ts` | `PlaybackClock` leaf, first child of `<Canvas>` | ✓ WIRED | Confirmed — grep + direct read of `CellScene.tsx` |
+| `SampleSelect.tsx` | `gcode/samples.ts` | `samplesForMode(cellMode)` supplies option list | ✓ WIRED | Confirmed |
+| `useCellModeSampleSync.ts` | `cellStore.ts` | `selectSample(firstSampleIdForMode(mode), 'mode-sync')` on mode change | ✓ WIRED | Confirmed |
+| `cellStore.ts` (`selectSample`) | `gcode/toolpath-anchor.ts` | `toolpathAnchorForMode(useUiShellStore.getState().cellMode)` before the fetch await | ✓ WIRED | Confirmed |
+| `Workbench.tsx` | `gcode/toolpath-anchor.ts` | `toolpathAnchorForMode(cellMode).x` for tabletop + legs | ✓ WIRED | Confirmed |
+| `CellScene.tsx` (`railPos`) | `cellStore.ts` | `state.trajectory?.railPos ?? state.lastRailPos` (CR-01 fix) | ✓ WIRED | Confirmed |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|---------------------|--------|
-| `RobotPose.tsx` | `sample.joints` → `robot.setJointValue` | `sampleAtFraction(trajectory, livePlayback.fraction)` ← real `CompiledTrajectory.samples` (IK-solved, from `compileTrajectory`) | Yes | ✓ FLOWING |
-| `ScrubMarker.tsx` | `sample.point` → `mesh.position.set` | Same `sampleAtFraction` call, same `trajectory.samples` | Yes | ✓ FLOWING |
-| `ScrubControl.tsx` | `scrubFraction` → slider value + percent readout | `cellStore.scrubFraction`, written by `usePlaybackClock`'s throttled sync or manual drag | Yes | ✓ FLOWING |
-| `PlaybackControl.tsx` | `isPlaying` → icon + disabled state | `cellStore.isPlaying`/`trajectory` | Yes | ✓ FLOWING |
-
-Confirmed empirically: both bundled samples (`public/gcode/print-sample.gcode`, `public/gcode/mill-sample.gcode`) compile to `status: 'ready'` (never `'frozen-at-unreachable'`) with 1330 and 1137 samples respectively — the WR-04 frozen-trajectory timing gap (see Anti-Patterns below) does not affect either sample this phase's UI actually offers, so the core "press play, watch it run" path is not degraded by it for real, in-app usage.
+| `RobotPose.tsx` | `sample.joints` → `robot.setJointValue` | `sampleAtFraction` ← real `CompiledTrajectory.samples` (IK-solved) | Yes | ✓ FLOWING |
+| `ScrubMarker.tsx` | `sample.point` → `mesh.position.set` | Same `sampleAtFraction` call | Yes | ✓ FLOWING |
+| `PlaybackTrail.tsx` | `traversedSegmentCount` → `geometry.instanceCount` | `buildTrailGeometry(trajectory)` ← real compiled samples | Yes | ✓ FLOWING |
+| `CellScene.tsx` `railPos` | `RailRig` position prop | `trajectory.railPos` (real, resolver-computed) or `lastRailPos` (last real resolved value, never a hardcoded fallback) | Yes | ✓ FLOWING |
+| `SampleSelect.tsx` | dropdown options | `samplesForMode(cellMode)` ← real `GCODE_SAMPLES` filtered by mode | Yes | ✓ FLOWING |
+| `Workbench.tsx` | tabletop/leg X | `toolpathAnchorForMode(cellMode).x` ← real `railStartXForMode` | Yes | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Playback clock core + headless end-to-end run (real compiled trajectory) | `npx vitest run src/playback/clock-step.test.ts` | 13/13 pass | ✓ PASS |
-| D-02 weighted duration mapping | `npx vitest run src/playback/duration-mapping.test.ts` | 14/14 pass | ✓ PASS |
-| Shared interpolated sample lookup | `npx vitest run src/trajectory/sample-lookup.test.ts` | 16/16 pass | ✓ PASS |
-| Store playback contract incl. WR-01 regression tests (`cellStore.ts`) | `npx vitest run src/store/cellStore.test.ts` | 139/139 pass (up from 129 pre-fix) | ✓ PASS |
-| Bundled samples never freeze (ad hoc check, removed after run) | one-off `compileTrajectory` against both bundled `.gcode` files | print: `ready`, 1330/1330; mill: `ready`, 1137/1137 | ✓ PASS |
-| Full workspace suite (re-run after fix) | `npx vitest run` | 976/976 pass (up from 973 pre-fix) | ✓ PASS |
-| Type-check (re-run after fix) | `npx tsc -b` | clean | ✓ PASS |
-| Production build (re-run after fix) | `npm run build` | `tsc -b && vite build` clean, `dist/` produced | ✓ PASS |
-| In-browser Play/Pause/scrub visual behavior | — | not run (no browser harness) | ? SKIP — routed to human verification |
+| Full workspace suite (independent re-run, this verification pass) | `npx vitest run` | 1054/1054 pass, 105 files | ✓ PASS |
+| Type-check (independent re-run) | `npx tsc -b` | clean | ✓ PASS |
+| Playback core + weighted mapping + sample lookup + store + trail + samples + rail + anchor + mode-rail (targeted re-run) | `npx vitest run src/scene/trail-progress.test.ts src/scene/cell-scene-order.test.ts src/gcode/samples.test.ts src/kinematics/rail.test.ts src/gcode/toolpath-anchor.test.ts src/trajectory/mode-rail.test.ts src/store/cellStore.test.ts` | 326/326 pass, 25 files | ✓ PASS |
+| CR-01 fix present on disk | `grep -n "lastRailPos" src/scene/CellScene.tsx src/store/cellStore.ts` | 5 matches across both files, fallback confirmed at `CellScene.tsx:88` | ✓ PASS |
+| Mount order (writer-before-readers) | `grep -n "PlaybackClock\|<RailRig\|<Toolpath\|<PlaybackTrail\|<ScrubMarker" src/scene/CellScene.tsx` | `<PlaybackClock />` at line 111, before `<RailRig>` (141), `<Toolpath>` (152), `<PlaybackTrail>` (158), `<ScrubMarker>` (163) | ✓ PASS |
+| Debt-marker scan across all 25 phase-modified files | `grep -nE "TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER"` per file | No matches in any file | ✓ PASS |
+| In-browser Play/Pause/scrub/highlight/mode/rail visual behavior | 04-06 Task 3 blocking checkpoint | Round 1: 4/5 items confirmed, 1 camera-framing issue found and fixed (commit `8cf0c43`). Round 2: human replied **"approved"** | ✓ PASS (human-confirmed) |
 
 ### Probe Execution
 
-No probes declared for this phase (no `scripts/*/tests/probe-*.sh` files and no probe references in the plans or SUMMARYs). Step 7c: SKIPPED.
+No probes declared for this phase (no `scripts/*/tests/probe-*.sh` files, no probe references in plans/SUMMARYs). Step 7c: SKIPPED.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|--------------|--------|----------|
-| SIM-04 | 04-01, 04-02, 04-03 | User can press play to animate the UR3e robot following the toolpath in real time, synced to the visible trajectory | ✓ SATISFIED (human confirmation pending) | Full Play/Pause/scrub/weighted-timing/interpolated-lookup pipeline present, wired, and unit-tested, with no open code-level gaps remaining; REQUIREMENTS.md already marks SIM-04 complete, mapped only to Phase 4 — no orphaned Phase 4 requirements found |
+| SIM-04 | 04-01, 04-02, 04-03, 04-04, 04-05, 04-06 | User can press play to animate the UR3e robot following the toolpath in real time, synced to the visible trajectory | ✓ SATISFIED | Full Play/Pause/scrub/weighted-timing/interpolated-lookup/highlight/mode-filter/per-mode-rail pipeline present, wired, unit-tested, and human-confirmed via the 04-06 blocking checkpoint ("approved"). REQUIREMENTS.md already marks SIM-04 Complete, mapped only to Phase 4 — no orphaned Phase 4 requirements found. |
 
 ### Anti-Patterns Found
 
+No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers found in any of the 25 files this phase (across all 6 plans) modified.
+
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `src/store/cellStore.ts` | 156-166, 174-181, 209-215 | ~~Incomplete `livePlayback.fraction`/`scrubFraction` reset across `selectSample`'s non-success branches~~ | ✅ CLOSED | Fixed in commit `d93b93a`. All four `set()` sites now reset both channels; 3 new regression tests cover the previously-untested branches. Re-verified above. |
-| `src/playback/duration-mapping.ts` | 104-165 vs `src/trajectory/compile.ts` 299-301 | `buildDurationMapping`'s elapsed-time axis is built from the toolpath's full *intended* length, never truncated for a `frozen-at-unreachable` trajectory (04-REVIEW.md WR-04) | ⚠️ Warning | On a frozen trajectory, the robot reaches its frozen pose early and then visibly sits motionless while the clock/slider keep advancing to 100%. Neither bundled sample triggers `frozen-at-unreachable` (confirmed empirically above), so this does not affect the phase's demonstrable "must not fail" path today, but it is a real, untested gap against the plan's own transparency prohibition for any g-code that does freeze. Recommend fixing or explicitly accepting+testing before relying on user-supplied g-code beyond the two bundled samples. |
-| `src/playback/clock-step.ts`, `src/playback/duration-mapping.ts`, `src/store/cellStore.ts`, `src/trajectory/sample-lookup.ts` | multiple | Finite-then-clamp-to-[0,1] logic independently reimplemented 4 times (04-REVIEW.md WR-02) | ℹ️ Info | All four copies currently agree; no shared source of truth to catch future drift. Code-quality follow-up, not a functional defect today. |
-| `src/playback/duration-mapping.test.ts`, `src/playback/usePlaybackClock.ts` | whole files | The production integration (`compileTrajectory` + `buildDurationMapping` + `usePlaybackClock`) is never exercised together in one test; `usePlaybackClock.ts` itself has no dedicated test file (04-REVIEW.md WR-03) | ℹ️ Info | Each layer is independently well-tested; the seam where all three meet at runtime has no direct automated coverage. Recommend an integration test before this becomes load-bearing for a later phase. |
-| `src/trajectory/sample-lookup.ts` | 57-63 | `blendJoints` uses a double cast (`as unknown as TrajectorySample['joints']`) that suppresses tuple-arity checking (04-REVIEW.md WR-05) | ℹ️ Info | Code-quality/type-safety follow-up, not a runtime defect observed. |
-
-No `TBD`/`FIXME`/`XXX`/`TODO`/`HACK`/`PLACEHOLDER` markers found in any file modified by this phase.
+| `src/playback/duration-mapping.ts` | 104-165 | WR-01: independently re-sums toolpath arc length instead of reusing `compile.ts`'s own table | ℹ️ Info (deferred by user decision) | Both copies currently agree for all real fixtures; would only diverge under a hypothetical inter-segment gap not currently producible by the parser. Not a blocker per 04-REVIEW.md's explicit user-decision deferral. |
+| `src/ui/SampleSelect.tsx` | 64-94 | WR-02: `<select>` `value` can reference an id absent from that render's own `<option>` list for one render, right after a mode switch | ℹ️ Info (deferred by user decision) | Self-correcting within the same task tick; not visually perceptible. |
+| `src/playback/usePlaybackClock.ts`, `duration-mapping.ts` | — | WR-03: a `frozen-at-unreachable` trajectory gives no timing cue that the run "finished early" | ℹ️ Info (deferred by user decision) | Confirmed in the prior verification pass that neither bundled sample ever reaches `'frozen-at-unreachable'`; does not affect this phase's actual demonstrable path. |
+| `src/trajectory/sample-lookup.ts` | 57-63 | IN-01: unsafe `as unknown as` tuple cast in `blendJoints` | ℹ️ Info (deferred by user decision) | Type-safety follow-up, not a runtime defect observed. |
+| `.planning/ROADMAP.md` | 132 | Stale summary line "6/6 plans executed (3/3 executed, 3 gap-closure plans pending)" — all 6 plans' checkboxes below it are correctly `[x]`, only this one summary sentence wasn't updated after 04-06 completed | ℹ️ Info | Documentation staleness only; does not affect verification of the actual codebase. |
 
 ### Human Verification Required
 
-### 1. Full playback run
+None. All items previously requiring human confirmation have been resolved:
 
-**Test:** Run `npm run dev`, select a bundled sample, press Play.
-**Expected:** The UR3e and rail carriage animate continuously along the whole toolpath, holding the final pose at the end; the teal marker rides the line in step with the flange; the slider and percentage readout advance live; the button icon toggles Play/Pause correctly.
-**Why human:** Visual animation smoothness and cross-component sync cannot be confirmed by this project's Vitest suite (no jsdom/rendering harness).
-
-### 2. Drag-to-pause-and-seek (D-04)
-
-**Test:** With a sample loaded, press Play, then drag the scrub slider while the robot is moving.
-**Expected:** Playback stops immediately at the dragged position, the button returns to the play icon, and the robot stays where the drag left it until Play is pressed again.
-**Why human:** The actual drag gesture and its visual seek result require in-browser interaction.
-
-### 3. Rapid-vs-cut weighted timing (D-02)
-
-**Test:** Load the milling sample and press Play.
-**Expected:** The robot covers non-cutting positioning moves noticeably faster than cutting passes, and the whole run still finishes in about ten seconds — the same total as the printing sample.
-**Why human:** Relative visual traverse speed and perceived total duration are not assertable from a headless unit test.
-
-### 4. Continuous blended motion + manual scrub agreement
-
-**Test:** Load a sample and press Play; then pause and drag the slider slowly end to end.
-**Expected:** The arm and marker move smoothly and continuously with no per-step ticking during playback; the marker stays on the drawn toolpath and the flange stays on the marker throughout manual scrubbing, matching Phase 3's behaviour.
-**Why human:** Continuous joint-space-blended motion quality and marker/flange visual agreement require rendering the scene.
+1. **Full playback run / continuous synced animation (SC1)** — resolved via 04-06 Task 3 blocking checkpoint, human reply "approved" (round 2, after a camera-framing fix in round 1).
+2. **Drag-to-pause-and-seek (D-04)** — passed in the original 04-UAT.md (test 2) and re-exercised in the 04-06 checkpoint (item 5), no regressions.
+3. **Rapid-vs-cut visual timing (D-02)** — explicitly deferred by the user as a non-blocking cosmetic note (04-UAT.md "Deferred Follow-Ups"), not an open verification item.
+4. **Continuous blended motion + manual scrub agreement (SC2)** — passed in the original 04-UAT.md (test 4) and re-exercised in the 04-06 checkpoint (item 5).
+5. **Mode-filtered picker, per-mode rail sweep, trajectory highlight, marker legibility (G-04-1)** — all confirmed live in the 04-06 checkpoint, "approved".
 
 ### Gaps Summary
 
-**Previous gap closed.** The one concrete, testable must-have from 04-01-PLAN.md that was unmet at initial verification — `selectSample` resetting both `isPlaying` and `livePlayback.fraction`/`scrubFraction` on every one of its four `set()` sites — is now fully satisfied. Commit `d93b93a` ("fix(04): reset scrub position on every selectSample() branch") adds the missing `get().livePlayback.fraction = 0` + `scrubFraction: 0` writes to the unknown-sample, "start parsing", and catch/error branches (the success branch already had them), and adds three regression tests in `cellStore.test.ts` that seed a non-zero scrub position and assert it's reset to 0 on each of those three branches. Re-verified directly against the current code: all four `set()` sites confirmed to reset both channels; the full suite is green at 976/976 (up from 973), `npx tsc -b` is clean, and `npm run build` is clean. No regressions found in anything previously verified.
+No gaps remain. This is a re-verification following a full cycle of: initial phase completion (04-01/02/03) → human UAT (04-UAT.md) → root-cause diagnosis → three gap-closure plans (04-04/05/06) closing the one major UAT finding (G-04-1: missing trajectory highlight, un-exercised rail motion, unfiltered sample picker) → a blocking human-verification checkpoint that caught and fixed a real UX regression (camera-zoom fighting the mode-switch rail sweep) before approving on round 2 → a post-hoc code review that found one Critical defect (CR-01: rail carriage falling back to a hardcoded center position during the async reselection gap) which was fixed (commit `f6ebf05`) and independently re-verified in this pass (full 1054-test suite green, `tsc -b` clean, fix present on disk and correctly wired).
 
-No FAILED must-haves remain. Two items are present, wired, and unit-tested at the mechanism level but require human/in-browser confirmation before the phase can be called fully done, per this project's own `human_verify_mode: end-of-phase` config and the plans' own `<verify><human-check>` blocks: (1) visually continuous, stutter-free playback synced to the drawn trajectory line, and (2) smooth marker/arm tracking. Both are explicitly declared `verification: backstop` in the plans' own must-haves — they were always deferred to this end-of-phase checkpoint, not skipped. Four human-verification items (harvested from the three plans' own `<human-check>` blocks) are listed above and cover these plus D-04 drag-to-pause-and-seek and D-02's rapid-vs-cut visual timing.
+Both ROADMAP Phase 4 success criteria are verified: (1) pressing Play animates the UR3e continuously along the full toolpath, synced to the trajectory line — now including a visible, growing highlight on that line, human-confirmed; (2) the highlight and TCP marker track position smoothly via an imperative `useFrame`/`getState()` loop, never a per-frame reactive Zustand write — verified both architecturally (code) and visually (human checkpoint).
 
-One further item remains flagged for awareness but does not block this verification: WR-04 (the weighted duration mapping does not account for a truncated/frozen trajectory) is real and untested, but neither bundled sample ever reaches `frozen-at-unreachable` status (confirmed empirically), so it does not affect the phase's actual, in-app "must not fail" demonstration today. Recommend addressing before any future phase relies on user-supplied or wider-ranging g-code.
+Four Warning/Info-level code-review findings (WR-01, WR-02, WR-03, IN-01) and one visual-tuning note (D-02 pacing) remain open by explicit user decision, are non-blocking, and do not affect either bundled sample's actual in-app playback path. One documentation-staleness note (a ROADMAP.md summary sentence not updated after gap closure) is cosmetic only.
 
 ---
 
-*Verified: 2026-08-15T17:45:00Z*
+*Verified: 2026-08-15T20:15:00Z*
 *Verifier: Claude (gsd-verifier)*

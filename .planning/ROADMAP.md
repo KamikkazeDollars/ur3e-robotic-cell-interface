@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Static Rig + Kinematics Foundation** - UR3e + rail render at a correct static pose in an interactive, nav-cube-driven 3D scene; project is live on GitHub + a public URL from day one (completed 2026-08-13)
 - [x] **Phase 2: G-code Import + Static Toolpath** - Upload a g-code file and see it parsed into a classified, color-coded static toolpath in the 3D scene (completed 2026-08-14)
 - [ ] **Phase 3: Inverse Kinematics + Trajectory Compile + Scrub** - Scrub the timeline and watch the UR3e (incl. rail) accurately re-pose along the toolpath via closed-form IK
-- [ ] **Phase 4: Playback Engine** - Press play and watch the UR3e animate the full toolpath in real time, synced to the visible trajectory
+- [x] **Phase 4: Playback Engine** - Press play and watch the UR3e animate the full toolpath in real time, synced to the visible trajectory (completed 2026-08-15)
 - [ ] **Phase 5: Telemetry / Dashboard** - Live joint angles, TCP position/speed, and rail position/travel, all computed from the same playback data the scene reads
 - [ ] **Phase 6: Operations Tree + Mill Engagement Coloring** - Per-operation start/end markers, a sequenced operations tree with computed durations, and depth-of-engagement coloring for milling cuts
 - [ ] **Phase 7: Tool-Changer + Print/Mill Tabs** - Switch between Printing and Milling tabs for the same cell, with the tool-changer visually swapping the mounted tool
@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Static Rig + Kinematics Foundation | 4/4 | Complete    | 2026-08-13 |
 | 2. G-code Import + Static Toolpath | 5/5 | Complete    | 2026-08-14 |
 | 3. Inverse Kinematics + Trajectory Compile + Scrub | 3/3 | In Progress|  |
-| 4. Playback Engine | 6/6 | In Progress|  |
+| 4. Playback Engine | 6/6 | Complete    | 2026-08-15 |
 | 5. Telemetry / Dashboard | 0/? | Not started | - |
 | 6. Operations Tree + Mill Engagement Coloring | 0/? | Not started | - |
 | 7. Tool-Changer + Print/Mill Tabs | 0/? | Not started | - |
