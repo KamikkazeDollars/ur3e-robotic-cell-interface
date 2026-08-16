@@ -9,3 +9,10 @@ export {
   WORKBENCH_PENETRATION_EPSILON_M,
   type CollisionFlags,
 } from './pose-collision'
+
+export {
+  validateManualPose,
+  MANUAL_POSE_REJECTION_COPY,
+  type ManualPoseRejectionReason,
+  type ManualPoseVerdict,
+} from './manual-pose-safety'
