@@ -27,7 +27,7 @@ Requirements for the interview deliverable. Each maps to roadmap phases.
 ### Dashboard
 
 - [ ] **DASH-01**: User sees live joint angles for the UR3e, computed from toolpath playback, not mock data
-- [ ] **DASH-02**: User sees live TCP Cartesian position and speed, computed from toolpath playback
+- [ ] **DASH-02**: ~~User sees live TCP Cartesian position and speed, computed from toolpath playback~~ — **Descoped** (quick 260816-m6d): user direction — the cell's flange is bare, so a TCP readout describes a tool that does not exist.
 - [ ] **DASH-03**: User sees the 7th-axis rail's current position and remaining travel distance in each direction, computed from playback
 
 ### Tool-Changer
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCENE-03 | Phase 1 | Complete |
 | SCENE-04 | Phase 1 | Complete |
 | DASH-01 | Phase 5 | Pending |
-| DASH-02 | Phase 5 | Pending |
+| DASH-02 | Phase 5 | Descoped (quick 260816-m6d — bare flange, no TCP to report) |
 | DASH-03 | Phase 5 | Pending |
 | TOOL-01 | Phase 7 | Pending |
 | TOOL-02 | Phase 7 | Pending |

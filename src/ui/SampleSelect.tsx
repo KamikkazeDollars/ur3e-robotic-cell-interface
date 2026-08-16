@@ -1,4 +1,4 @@
-import { useCellStore } from '../store/cellStore'
+import { useCellStore, UPLOADED_JOB_ID } from '../store/cellStore'
 import { useUiShellStore } from '../store/uiShellStore'
 import { samplesForMode } from '../gcode/samples'
 import { SCENE_STATUS_COPY } from './scene-status-copy'
@@ -56,9 +56,17 @@ const noteStyle: React.CSSProperties = {
  * G-04-1 gap closure: the option list is filtered to the active cell mode
  * via `samplesForMode(cellMode)` rather than rendered from the full
  * `GCODE_SAMPLES` list — the picker now offers only jobs the currently
- * mounted tool suits. `useCellModeSampleSync.ts` (mounted once at the App
- * shell level) keeps the loaded selection consistent when the mode changes
- * out from under it.
+ * mounted tool suits. `useModeJobSync.ts` (mounted once at the App shell
+ * level) keeps the loaded selection consistent when the mode changes out
+ * from under it.
+ *
+ * Quick 260816-m6d: when an uploaded job is active for the current mode
+ * (`uploadedJobs[cellMode]`), one extra `disabled` option is rendered,
+ * labelled with the filename, so the dropdown displays the truly-loaded job
+ * instead of falling back to its "select a sample" placeholder. `disabled`
+ * keeps it displayable-but-unselectable — the same trick the placeholder
+ * option above already uses — so `onChange` still only ever fires with a
+ * real bundled sample id.
  */
 export default function SampleSelect() {
   const selectedSampleId = useCellStore((state) => state.selectedSampleId)
@@ -66,6 +74,7 @@ export default function SampleSelect() {
   const toolpath = useCellStore((state) => state.toolpath)
   const trajectory = useCellStore((state) => state.trajectory)
   const cellMode = useUiShellStore((state) => state.cellMode)
+  const uploadedJob = useCellStore((state) => state.uploadedJobs[cellMode])
   const availableSamples = samplesForMode(cellMode)
 
   const unitLabel = toolpath?.unit ?? 'mm'
@@ -92,6 +101,11 @@ export default function SampleSelect() {
             {sample.label}
           </option>
         ))}
+        {uploadedJob && (
+          <option value={UPLOADED_JOB_ID} disabled>
+            Uploaded: {uploadedJob.fileName}
+          </option>
+        )}
       </select>
       <span style={noteStyle}>Samples are interpreted in {unitLabel}.</span>
       {skippedMotionCount > 0 && (

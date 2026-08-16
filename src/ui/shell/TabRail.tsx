@@ -1,13 +1,4 @@
-import {
-  LayoutDashboard,
-  ListTree,
-  Settings,
-  Eye,
-  Crosshair,
-  Plug,
-  Gauge,
-  type LucideIcon,
-} from 'lucide-react'
+import { LayoutDashboard, Printer, Drill, type LucideIcon } from 'lucide-react'
 import { TAB_DEFS, type TabId } from '../tabs/tab-registry'
 import { useUiShellStore } from '../../store/uiShellStore'
 
@@ -15,13 +6,9 @@ import { useUiShellStore } from '../../store/uiShellStore'
 // hardcoded tab list) so TypeScript fails the build if a registry id is
 // ever added without an icon behind it.
 const TAB_ICONS: Record<TabId, LucideIcon> = {
+  printing: Printer,
+  milling: Drill,
   dashboard: LayoutDashboard,
-  operations: ListTree,
-  setup: Settings,
-  vision: Eye,
-  calibrate: Crosshair,
-  io: Plug,
-  optimization: Gauge,
 }
 
 const railStyle: React.CSSProperties = {

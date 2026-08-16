@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 
 // Shared presentational primitives every panel under `src/ui/tabs/` composes
-// from, so the seven panels stay visually consistent and none of them
-// invents its own one-off styling. Inline `React.CSSProperties` objects
-// referencing the `--ui-*` / `--space-*` / `--text-*` custom properties,
-// exactly as `SampleSelect.tsx` and `ScrubControl.tsx` already do — no
-// CSS-module or styled-components layer.
+// from (quick 260816-m6d: now three panels — Printing/Milling's `JobPanel`
+// and `DashboardPanel` — pruned from the original seven), so they stay
+// visually consistent and none of them invents its own one-off styling.
+// Inline `React.CSSProperties` objects referencing the `--ui-*` /
+// `--space-*` / `--text-*` custom properties, exactly as `SampleSelect.tsx`
+// and `ScrubControl.tsx` already do — no CSS-module or styled-components
+// layer.
 
 const panelShellStyle: React.CSSProperties = {
   display: 'flex',
@@ -103,26 +105,5 @@ export function ReadoutRow({ label, value = '—' }: { label: string; value?: st
       <span style={readoutLabelStyle}>{label}</span>
       <span style={readoutValueStyle}>{value}</span>
     </div>
-  )
-}
-
-const phaseNoteStyle: React.CSSProperties = {
-  marginTop: 'auto',
-  paddingTop: 'var(--space-sm)',
-  fontSize: 'var(--text-label)',
-  lineHeight: 'var(--leading-label)',
-  fontWeight: 'var(--weight-regular)',
-  color: 'var(--ui-fg-muted)',
-  fontStyle: 'italic',
-}
-
-/** Muted footer line making explicit which phase fills this surface in —
- * every panel ends with exactly one, so no placeholder can be mistaken for
- * live data. */
-export function PhaseNote({ phase, children }: { phase: number; children: ReactNode }) {
-  return (
-    <p style={phaseNoteStyle}>
-      Arrives in Phase {phase} — {children}
-    </p>
   )
 }

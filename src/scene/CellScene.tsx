@@ -85,7 +85,12 @@ export default function CellScene() {
   // position (never reset by the null-out branches), so the fallback always
   // reflects the carriage's true last on-screen position instead of an
   // arbitrary constant.
-  const railPos = useCellStore((state) => state.trajectory?.railPos ?? state.lastRailPos)
+  // Quick 260816-m6d: manual jog (a typed rail position) wins over the
+  // compiled trajectory, which itself wins over the CR-01 last-known-good
+  // fallback.
+  const railPos = useCellStore(
+    (state) => state.manualJog?.railPos ?? state.trajectory?.railPos ?? state.lastRailPos,
+  )
 
   return (
     // `position: fixed` + `inset: 0` sizes this wrapper directly against the

@@ -44,10 +44,11 @@ const noteStyle: React.CSSProperties = {
  * store action and never touches the scene, camera or trajectory directly
  * (never imports from `scene/`). Disabled whenever the store has no
  * trajectory or the trajectory has no samples, so a drag can never target a
- * trajectory that doesn't exist — with no sample selected, this reads as an
- * inert control next to a robot parked at the D-08 ready pose, PLUS a
- * one-line explanation (below) of why it's inert, rather than a
- * silently-do-nothing control.
+ * trajectory that doesn't exist — kept as a defensive guard even though
+ * (quick 260816-m6d) `App.tsx` no longer mounts this control until
+ * `playbackStarted` is true, and `PlaybackControl.tsx`'s own Play button is
+ * itself disabled whenever there is no trajectory, so a job is always
+ * loaded by the time this control can appear.
  *
  * The percentage readout is derived from `scrubFraction` at render time —
  * never a second source of truth — and is wired to the range input via
@@ -60,6 +61,7 @@ export default function ScrubControl() {
   const trajectory = useCellStore((state) => state.trajectory)
   const pause = useCellStore((state) => state.pause)
   const isPlaying = useCellStore((state) => state.isPlaying)
+  const clearManualJog = useCellStore((state) => state.clearManualJog)
 
   const disabled = !trajectory || trajectory.samples.length === 0
   const percent = Math.round(scrubFraction * 100)
@@ -89,15 +91,15 @@ export default function ScrubControl() {
           // stopped playback would make a running clock stop itself within
           // one throttle interval of starting (Pitfall 4).
           if (isPlaying) pause()
+          // Quick 260816-m6d, same reasoning: dragging the timeline hands
+          // the robot back from manual command to the toolpath. This
+          // belongs here, not in setScrubFraction, for the same throttled-
+          // sync reason as the pause-on-drag call above.
+          clearManualJog()
           setScrubFraction(Number(event.target.value))
         }}
         style={rangeStyle}
       />
-      {disabled && (
-        <span style={noteStyle} role="status">
-          Select a sample before the toolpath can be scrubbed.
-        </span>
-      )}
     </div>
   )
 }

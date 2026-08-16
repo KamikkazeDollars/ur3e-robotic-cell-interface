@@ -10,6 +10,9 @@ export {
   type JointAngles,
 } from './ur3e-dh';
 
+export { clampJointAngle, clampJointAngles } from './joint-clamp';
+
+
 export {
   forwardKinematics,
   isWithinJointLimits,

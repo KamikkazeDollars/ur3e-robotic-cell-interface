@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { useCellStore } from './cellStore'
+import { useCellStore, MAX_UPLOAD_BYTES, UPLOADED_JOB_ID } from './cellStore'
 import { useUiShellStore } from './uiShellStore'
-import { RAIL_CENTER_X } from '../kinematics'
+import { RAIL_CENTER_X, RAIL_TRAVEL, UR3E_JOINT_LIMITS, UR3E_PARKED_POSE } from '../kinematics'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from '../scene/camera-defaults'
 
 describe('useCellStore', () => {
@@ -105,7 +105,12 @@ describe('useCellStore — setScrubFraction', () => {
 
 describe('useCellStore — playback', () => {
   beforeEach(() => {
-    useCellStore.setState({ isPlaying: false, scrubFraction: 0, livePlayback: { fraction: 0 } })
+    useCellStore.setState({
+      isPlaying: false,
+      playbackStarted: false,
+      scrubFraction: 0,
+      livePlayback: { fraction: 0 },
+    })
   })
 
   it('isPlaying starts false', () => {
@@ -117,6 +122,39 @@ describe('useCellStore — playback', () => {
     expect(useCellStore.getState().isPlaying).toBe(true)
     useCellStore.getState().pause()
     expect(useCellStore.getState().isPlaying).toBe(false)
+  })
+
+  it('playbackStarted starts false', () => {
+    expect(useCellStore.getState().playbackStarted).toBe(false)
+  })
+
+  it('play() sets playbackStarted true', () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+  })
+
+  it('pause() leaves playbackStarted true (the timeline stays visible once unlocked)', () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+    useCellStore.getState().pause()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+  })
+
+  it('loading a job returns playbackStarted to false', async () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+
+    const printGcode = 'G1 X10 Y0 Z0 F100\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+    await useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().playbackStarted).toBe(false)
+    vi.unstubAllGlobals()
   })
 
   it('livePlayback.fraction starts at 0', () => {
@@ -483,5 +521,165 @@ describe('useCellStore — lastRailPos fallback (04-REVIEW CR-01)', () => {
     expect(printRailPos as number).toBeLessThanOrEqual(hi)
     expect(millRailPos as number).toBeGreaterThanOrEqual(lo)
     expect(millRailPos as number).toBeLessThanOrEqual(hi)
+  })
+})
+
+describe('useCellStore — manualJog (quick 260816-m6d)', () => {
+  beforeEach(() => {
+    useCellStore.setState({ manualJog: null, trajectory: null, lastRailPos: RAIL_CENTER_X })
+  })
+
+  it('starts at null', () => {
+    expect(useCellStore.getState().manualJog).toBeNull()
+  })
+
+  it('setManualJointAngle clamps an out-of-range value onto the real joint limit', () => {
+    useCellStore.getState().setManualJointAngle(0, 10)
+    expect(useCellStore.getState().manualJog?.joints[0]).toBe(UR3E_JOINT_LIMITS[0].max)
+  })
+
+  it("setManualJointAngle honours the elbow's narrower limit (index 2)", () => {
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJog?.joints[2]).toBe(UR3E_JOINT_LIMITS[2].max)
+  })
+
+  it('setManualRailPos(99) lands on RAIL_TRAVEL.max', () => {
+    useCellStore.getState().setManualRailPos(99)
+    expect(useCellStore.getState().manualJog?.railPos).toBe(RAIL_TRAVEL.max)
+  })
+
+  it('the first manual-jog call seeds the other five joints from UR3E_PARKED_POSE', () => {
+    useCellStore.getState().setManualJointAngle(0, 0.1)
+    const joints = useCellStore.getState().manualJog?.joints
+    expect(joints).toBeDefined()
+    for (let i = 1; i < 6; i++) {
+      expect(joints?.[i]).toBe(UR3E_PARKED_POSE[i])
+    }
+  })
+
+  it('play() returns manualJog to null', () => {
+    useCellStore.getState().setManualJointAngle(0, 0.1)
+    expect(useCellStore.getState().manualJog).not.toBeNull()
+    useCellStore.getState().play()
+    expect(useCellStore.getState().manualJog).toBeNull()
+    // Restore isPlaying so later tests in this file aren't affected.
+    useCellStore.setState({ isPlaying: false })
+  })
+
+  it('each setter produces a new tuple reference on every call', () => {
+    useCellStore.getState().setManualJointAngle(0, 0.1)
+    const firstJoints = useCellStore.getState().manualJog?.joints
+    useCellStore.getState().setManualJointAngle(1, 0.2)
+    const secondJoints = useCellStore.getState().manualJog?.joints
+    expect(secondJoints).not.toBe(firstJoints)
+  })
+
+  it('clearManualJog() is a no-op (no re-render churn) when manualJog is already null', () => {
+    const before = useCellStore.getState()
+    useCellStore.getState().clearManualJog()
+    const after = useCellStore.getState()
+    expect(after).toBe(before)
+  })
+})
+
+describe('useCellStore — per-mode uploads (quick 260816-m6d)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useCellStore.setState({ uploadedJobs: { printing: null, milling: null } })
+  })
+
+  it('an upload for printing leaves uploadedJobs.milling null', async () => {
+    const text = 'G1 X10 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'job.gcode', text)
+
+    expect(useCellStore.getState().uploadedJobs.printing).toEqual({ fileName: 'job.gcode', text })
+    expect(useCellStore.getState().uploadedJobs.milling).toBeNull()
+  })
+
+  it('loadUploadedGcode resolves selectedSampleId to the UPLOADED_JOB_ID sentinel on success', async () => {
+    const text = 'G1 X10 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'job.gcode', text)
+
+    expect(useCellStore.getState().selectedSampleId).toBe(UPLOADED_JOB_ID)
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('ready')
+  })
+
+  it("loadJobForMode prefers an uploaded job over the bundled sample", async () => {
+    const uploadedText = 'G1 X5 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'uploaded.gcode', uploadedText)
+    const uploadedToolpath = useCellStore.getState().toolpath
+
+    await useCellStore.getState().loadJobForMode('printing')
+
+    expect(useCellStore.getState().selectedSampleId).toBe(UPLOADED_JOB_ID)
+    // Re-resolved from the SAME uploaded text, not the bundled sample —
+    // both loads parse the identical single-segment g-code above, so their
+    // resulting toolpaths carry the same number of segments as a proxy for
+    // "loaded from the upload, not a fetch".
+    expect(useCellStore.getState().toolpath?.segments.length).toBe(uploadedToolpath?.segments.length)
+  })
+
+  it("over-cap text lands on toolpathLoadStatus: 'error' without recording the entry", async () => {
+    const oversizedText = 'x'.repeat(MAX_UPLOAD_BYTES + 1)
+    useCellStore.setState({ uploadedJobs: { printing: null, milling: null } })
+
+    await useCellStore.getState().loadUploadedGcode('printing', 'huge.gcode', oversizedText)
+
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('error')
+    expect(useCellStore.getState().uploadedJobs.printing).toBeNull()
+  })
+
+  it('an over-cap upload leaves a PREVIOUS upload entry untouched', async () => {
+    const goodText = 'G1 X10 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'good.gcode', goodText)
+    expect(useCellStore.getState().uploadedJobs.printing).toEqual({ fileName: 'good.gcode', text: goodText })
+
+    const oversizedText = 'x'.repeat(MAX_UPLOAD_BYTES + 1)
+    await useCellStore.getState().loadUploadedGcode('printing', 'huge.gcode', oversizedText)
+
+    expect(useCellStore.getState().uploadedJobs.printing).toEqual({ fileName: 'good.gcode', text: goodText })
+  })
+
+  it('a sample selection after an upload still resolves normally', async () => {
+    const uploadedText = 'G1 X5 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'uploaded.gcode', uploadedText)
+    expect(useCellStore.getState().selectedSampleId).toBe(UPLOADED_JOB_ID)
+
+    const printGcode = 'G1 X10 Y0 Z0 F100\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+
+    await useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().selectedSampleId).toBe('print')
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('ready')
+    expect(useCellStore.getState().toolpath).not.toBeNull()
+  })
+
+  it('clearUploadedJob drops the entry and reloads the bundled sample for that mode', async () => {
+    const uploadedText = 'G1 X5 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'uploaded.gcode', uploadedText)
+    expect(useCellStore.getState().uploadedJobs.printing).not.toBeNull()
+
+    const printGcode = 'G1 X10 Y0 Z0 F100\nG1 X10 Y10 Z0\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+
+    useCellStore.getState().clearUploadedJob('printing')
+    // clearUploadedJob dispatches loadJobForMode without awaiting it itself
+    // (fire-and-forget, matching the "Use bundled sample" button's click
+    // handler) — wait a tick for the async load to settle.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(useCellStore.getState().uploadedJobs.printing).toBeNull()
+    expect(useCellStore.getState().selectedSampleId).toBe('print')
   })
 })

@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { TAB_DEFS, DEFAULT_TAB_ID } from './tab-registry'
+import { TAB_DEFS, DEFAULT_TAB_ID, cellModeForTab } from './tab-registry'
 import { PANELS } from '../shell/TabPanel'
 
-const EXPECTED_IDS = ['dashboard', 'operations', 'setup', 'vision', 'calibrate', 'io', 'optimization']
+const EXPECTED_IDS = ['printing', 'milling', 'dashboard']
 
 describe('tab-registry — TAB_DEFS', () => {
-  it('contains exactly 7 entries', () => {
-    expect(TAB_DEFS).toHaveLength(7)
+  it('contains exactly 3 entries', () => {
+    expect(TAB_DEFS).toHaveLength(3)
   })
 
-  it('has an id set exactly equal to the 7 roadmap tab ids', () => {
+  it('has an id set exactly equal to printing/milling/dashboard', () => {
     const ids = TAB_DEFS.map((tab) => tab.id).sort()
     expect(ids).toEqual([...EXPECTED_IDS].sort())
   })
@@ -19,11 +19,9 @@ describe('tab-registry — TAB_DEFS', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('gives every entry a non-empty label and a phase number in 5-8', () => {
+  it('gives every entry a non-empty label', () => {
     for (const tab of TAB_DEFS) {
       expect(tab.label.length).toBeGreaterThan(0)
-      expect(tab.phase).toBeGreaterThanOrEqual(5)
-      expect(tab.phase).toBeLessThanOrEqual(8)
     }
   })
 
@@ -32,9 +30,9 @@ describe('tab-registry — TAB_DEFS', () => {
     expect(ids).toContain(DEFAULT_TAB_ID)
   })
 
-  // Test 6 (Task 3): the gate that keeps the rail and the panel set from
-  // drifting apart as later phases add or rename tabs — every registry id
-  // must resolve to a defined panel, and PANELS must carry no orphan key.
+  // The gate that keeps the rail and the panel set from drifting apart —
+  // every registry id must resolve to a defined panel, and PANELS must
+  // carry no orphan key.
   it('has a defined PANELS entry for every registry id, and no orphan PANELS key', () => {
     const registryIds = TAB_DEFS.map((tab) => tab.id).sort()
     const panelKeys = Object.keys(PANELS).sort()
@@ -43,5 +41,16 @@ describe('tab-registry — TAB_DEFS', () => {
       expect(PANELS[id]).toBeDefined()
     }
     expect(panelKeys).toEqual(registryIds)
+  })
+})
+
+describe('cellModeForTab', () => {
+  it('returns the mode itself for the two mode tabs', () => {
+    expect(cellModeForTab('printing')).toBe('printing')
+    expect(cellModeForTab('milling')).toBe('milling')
+  })
+
+  it('returns null for the dashboard tab', () => {
+    expect(cellModeForTab('dashboard')).toBeNull()
   })
 })
