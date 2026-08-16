@@ -53,11 +53,20 @@ describe('mode-rail end-to-end: the carriage genuinely moves by mode (G-04-1)', 
           expect(modeCompiled.status).toBe('ready')
         })
 
-        it(`${mode}: railPos is at least 0.5m ${mode === 'printing' ? 'right of' : 'left of'} RAIL_CENTER_X`, () => {
+        // Derived from MODE_RAIL_START_OFFSET_M rather than a hardcoded
+        // metres literal (quick 260816-srk ripple fix): a fixed "at least
+        // 0.5m" threshold silently drifted too close to the offset itself
+        // once RAIL_TRAVEL narrowed to +-1.095m (MODE_RAIL_START_OFFSET_M
+        // -> 0.5037m). Half the offset stays a meaningful "genuinely moved"
+        // sanity bound at any travel span, without re-picking an
+        // independent literal that can go stale again on the next
+        // travel-bound change.
+        const modeRailSanityThreshold = MODE_RAIL_START_OFFSET_M / 2
+        it(`${mode}: railPos is at least half of MODE_RAIL_START_OFFSET_M ${mode === 'printing' ? 'right of' : 'left of'} RAIL_CENTER_X`, () => {
           if (mode === 'printing') {
-            expect(modeCompiled.railPos).toBeGreaterThanOrEqual(RAIL_CENTER_X + 0.5)
+            expect(modeCompiled.railPos).toBeGreaterThanOrEqual(RAIL_CENTER_X + modeRailSanityThreshold)
           } else {
-            expect(modeCompiled.railPos).toBeLessThanOrEqual(RAIL_CENTER_X - 0.5)
+            expect(modeCompiled.railPos).toBeLessThanOrEqual(RAIL_CENTER_X - modeRailSanityThreshold)
           }
         })
 

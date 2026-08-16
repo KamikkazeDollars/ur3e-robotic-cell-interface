@@ -7,6 +7,13 @@
 // report of the same defect). It is still NOT a sourced hardware datasheet
 // value; do not mistake it for one.
 //
+// Provenance note (quick 260816-srk): the bound above was corrected again
+// after the user re-tested live against the already-trimmed visual track
+// and found the robot still overhanging it at both extremes. The visible
+// track span itself (`TRACK_HALF_SPAN_M` / `TRACK_LENGTH` in RailRig.tsx)
+// was confirmed correct in that same test pass and was deliberately left
+// alone — only the enforced travel bound narrowed.
+//
 // This module is the single source of truth for the rail's travel range,
 // centre position, clamping, and remaining-travel calculation: the 3D rail
 // geometry (end-stop markers, D-07) and Phase 5's Dashboard "remaining
@@ -14,8 +21,8 @@
 // where the limits are.
 import type { CellMode } from '../cell-mode'
 
-/** Rail travel range in metres, robot centred (2.6 m total travel). */
-export const RAIL_TRAVEL = { min: -1.3, max: 1.3 } as const;
+/** Rail travel range in metres, robot centred (2.19 m total travel). */
+export const RAIL_TRAVEL = { min: -1.095, max: 1.095 } as const;
 
 /** Centre of the travel range — computed from RAIL_TRAVEL, not restated. */
 export const RAIL_CENTER_X = (RAIL_TRAVEL.min + RAIL_TRAVEL.max) / 2;
@@ -87,7 +94,7 @@ export const RAIL_CANDIDATE_SPACING_M =
  * (b) Expressed as a whole number of `resolveRailPosition` candidate steps
  * (`MODE_RAIL_START_OFFSET_STEPS`) rather than restated as an independent
  * metres literal (quick 260816-s4e, U-3 fix): the station now sits at
- * roughly 46% of the 1.3m half-travel, leaving 0.702m of travel beyond it
+ * roughly 46% of the 1.095m half-travel, leaving 0.5913m of travel beyond it
  * on the tight side, so both stations stay well inside the end-stops with
  * usable travel remaining on both sides — asserted in `rail.test.ts`.
  * (c) Because the offset is DERIVED from `RAIL_CANDIDATE_SPACING_M`
