@@ -257,6 +257,7 @@ export default function DashboardPanel() {
   const setManualJointAngle = useCellStore((state) => state.setManualJointAngle)
   const setManualRailPos = useCellStore((state) => state.setManualRailPos)
   const clearManualJog = useCellStore((state) => state.clearManualJog)
+  const homeManualPose = useCellStore((state) => state.homeManualPose)
 
   // The reactive snapshot this render's `value` props derive from — the
   // SAME shape (and, structurally, the same fields) `manual-pose-readback.ts`
@@ -306,6 +307,18 @@ export default function DashboardPanel() {
         />
         <ReadoutRow label="Travel remaining (−X) (mm)" value={formatMillimetres(remaining.negative)} />
         <ReadoutRow label="Travel remaining (+X) (mm)" value={formatMillimetres(remaining.positive)} />
+      </PanelSection>
+      <PanelSection heading="Recovery">
+        {/* Quick 260816-qym (U-4): always visible/enabled, including while
+            a job is playing or paused — recovering a robot mid-run is the
+            entire point. Dispatches homeManualPose, the SAME
+            commitManualJog/validateManualPose gated path every other
+            manual-jog write uses; distinct from "Return to toolpath" below
+            (one hands control back to the trajectory, one parks the
+            robot) — both are wanted, so both stay. */}
+        <Button variant="secondary" onClick={() => homeManualPose()}>
+          Home / Reset Position
+        </Button>
       </PanelSection>
       {manualJog && (
         <div style={overrideRowStyle}>
