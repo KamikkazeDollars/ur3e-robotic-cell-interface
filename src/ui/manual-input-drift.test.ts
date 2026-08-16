@@ -12,7 +12,16 @@ import { manualJointDegrees, manualRailMillimetres } from './manual-pose-readbac
 import { useCellStore } from '../store/cellStore'
 import { useUiShellStore } from '../store/uiShellStore'
 import { toRadians, millimetresToMetres } from './manual-jog'
-import { RAIL_CENTER_X, UR3E_PARKED_POSE } from '../kinematics'
+import { RAIL_CENTER_X, RAIL_TRAVEL, UR3E_PARKED_POSE } from '../kinematics'
+
+// Derived from RAIL_TRAVEL (quick 260816-srk ripple fix) rather than a
+// hardcoded -1200mm literal: that value was comfortably in-range under the
+// old +-1300mm bound but landed OUTSIDE the corrected +-1095mm bound,
+// silently turning an "in-range, not clamped" test into a clamped-value
+// test. 90% of the negative limit stays a genuinely in-range probe at any
+// future travel span, so this test can never again drift stale the same way.
+const IN_RANGE_RAIL_TEST_MM = Math.trunc(RAIL_TRAVEL.min * 1000 * 0.9)
+const IN_RANGE_RAIL_TEST_M = millimetresToMetres(IN_RANGE_RAIL_TEST_MM)
 
 const JOINT_LABELS = ['Base', 'Shoulder', 'Elbow', 'Wrist 1', 'Wrist 2', 'Wrist 3'] as const
 
@@ -82,24 +91,24 @@ describe('commitNumberFieldDraft — manual-input drift end-to-end (quick 260816
     },
   )
 
-  it('rail: committing "-1200" millimetres leaves the store at -1.2 metres and returns "-1200.0"', () => {
+  it(`rail: committing "${IN_RANGE_RAIL_TEST_MM}" millimetres leaves the store at ${IN_RANGE_RAIL_TEST_M} metres and returns "${IN_RANGE_RAIL_TEST_MM}.0"`, () => {
     const { onCommit, readCommitted } = railFieldHandlers()
 
-    const draft = commitNumberFieldDraft('-1200', onCommit, readCommitted)
+    const draft = commitNumberFieldDraft(String(IN_RANGE_RAIL_TEST_MM), onCommit, readCommitted)
 
-    expect(draft).toBe('-1200.0')
+    expect(draft).toBe(`${IN_RANGE_RAIL_TEST_MM}.0`)
     expect(useCellStore.getState().manualJogError).toBeNull()
-    expect(useCellStore.getState().manualJog?.railPos).toBeCloseTo(-1.2, 10)
+    expect(useCellStore.getState().manualJog?.railPos).toBeCloseTo(IN_RANGE_RAIL_TEST_M, 10)
   })
 
   it('rail: repeating the exact same commit twice in a row is idempotent', () => {
     const { onCommit, readCommitted } = railFieldHandlers()
 
-    const first = commitNumberFieldDraft('-1200', onCommit, readCommitted)
-    const second = commitNumberFieldDraft('-1200', onCommit, readCommitted)
+    const first = commitNumberFieldDraft(String(IN_RANGE_RAIL_TEST_MM), onCommit, readCommitted)
+    const second = commitNumberFieldDraft(String(IN_RANGE_RAIL_TEST_MM), onCommit, readCommitted)
 
     expect(second).toBe(first)
-    expect(useCellStore.getState().manualJog?.railPos).toBeCloseTo(-1.2, 10)
+    expect(useCellStore.getState().manualJog?.railPos).toBeCloseTo(IN_RANGE_RAIL_TEST_M, 10)
   })
 
   it('a commit REFUSED by validateManualPose returns the draft string for the value the robot is still actually holding, and leaves manualJogError set', () => {

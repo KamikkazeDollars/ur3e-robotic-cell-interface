@@ -70,11 +70,13 @@ export const END_STOP_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.02 // spans 
 export const TRACK_LENGTH = TRACK_HALF_SPAN_M * 2
 
 // At a travel extreme (RAIL_TRAVEL.min/.max) the carriage's own base plate
-// (CARRIAGE_BASE_WIDTH, above) is wider than TRACK_OVERHANG's remaining
-// visible track, so the plate's outer edge slightly overhangs the visible
-// track end. This is a direct, expected consequence of the user-specified
-// ±1.4m figure (quick 260816-s4e) — flagged for the Task 4 human checkpoint,
-// NOT something to "fix" by growing the track back out.
+// (CARRIAGE_BASE_WIDTH, above) now sits fully within the visible track:
+// half the plate's width is smaller than TRACK_OVERHANG's remaining visible
+// track, so no part of the plate overhangs the track end. This is a direct
+// consequence of the corrected, narrower enforced travel (quick 260816-srk)
+// — TRACK_HALF_SPAN_M / TRACK_LENGTH above remain the fixed, user-specified
+// visible-track figure (quick 260816-s4e) and were deliberately not
+// re-derived here.
 
 /** UR3e reach envelope (~500mm per official specs, approximate). Used only
  * for scene-composition floor sizing — not a kinematic constraint, and

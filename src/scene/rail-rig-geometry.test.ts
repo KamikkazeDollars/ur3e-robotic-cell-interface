@@ -16,9 +16,9 @@ import {
 } from './RailRig'
 
 describe('U-4: rail track is a fixed, user-specified span (quick 260816-s4e)', () => {
-  it('RAIL_TRAVEL is capped at the new empirically-determined ±1.3m range', () => {
-    expect(RAIL_TRAVEL.min).toBe(-1.3)
-    expect(RAIL_TRAVEL.max).toBe(1.3)
+  it('RAIL_TRAVEL is capped at the new empirically-determined ±1.095m range', () => {
+    expect(RAIL_TRAVEL.min).toBe(-1.095)
+    expect(RAIL_TRAVEL.max).toBe(1.095)
   })
 
   it('TRACK_LENGTH is exactly 2.8 to 10 decimal places', () => {
@@ -32,8 +32,8 @@ describe('U-4: rail track is a fixed, user-specified span (quick 260816-s4e)', (
     expect(high).toBeCloseTo(RAIL_CENTER_X + 1.4, 10)
   })
 
-  it('TRACK_OVERHANG is 0.1 to 10 decimal places and equals TRACK_HALF_SPAN_M minus half the travel span', () => {
-    expect(TRACK_OVERHANG).toBeCloseTo(0.1, 10)
+  it('TRACK_OVERHANG is 0.305 to 10 decimal places and equals TRACK_HALF_SPAN_M minus half the travel span', () => {
+    expect(TRACK_OVERHANG).toBeCloseTo(0.305, 10)
     expect(TRACK_OVERHANG).toBeCloseTo(TRACK_HALF_SPAN_M - (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / 2, 10)
   })
 
