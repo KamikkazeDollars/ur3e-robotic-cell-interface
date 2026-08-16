@@ -9,23 +9,23 @@ import { SCENE_PALETTE } from './scene-palette'
 // None of these restate a rail *travel* bound (RAIL_TRAVEL.min/.max /
 // RAIL_CENTER_X) — those are always read from the kinematics barrel so the
 // rendered rail and Phase 5's telemetry readout can never drift apart.
+//
+// U-2: RAIL_PROFILE_WIDTH, RAIL_PROFILE_HEIGHT, RAIL_GAP, TRACK_OVERHANG,
+// TRACK_END_MARGIN, END_STOP_WIDTH, END_STOP_HEIGHT, END_STOP_DEPTH, and
+// CARRIAGE_BASE_WIDTH are exported so `src/collision/pose-collision.ts` can
+// derive the rig's collision envelope instead of restating these numbers —
+// one geometry source feeds both the rendered mesh and the pose-collision
+// AABBs.
 
 // Twin parallel guide-rail profiles — real linear-rail hardware uses two
 // rails, not one wide flat bar (checkpoint follow-up, item 4).
-const RAIL_PROFILE_WIDTH = 0.05 // each rail's footprint along Z
-const RAIL_PROFILE_HEIGHT = 0.04 // each rail's height
-const RAIL_GAP = 0.22 // distance between the two rails' centrelines
-const TRACK_OVERHANG = 0.15 // margin past each travel limit so the end-stop blocks sit on the rail ends, not past them
-
-// Discrete end-stop blocks (short and wide, not tall thin fins) spanning
-// across both rails at each physical travel limit.
-const END_STOP_WIDTH = 0.07 // thin along the travel (X) axis
-const END_STOP_HEIGHT = 0.12 // short block, sits just above rail height
-const END_STOP_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.02 // spans both rails plus a small lip
+export const RAIL_PROFILE_WIDTH = 0.05 // each rail's footprint along Z
+export const RAIL_PROFILE_HEIGHT = 0.04 // each rail's height
+export const RAIL_GAP = 0.22 // distance between the two rails' centrelines
 
 // Carriage — a linear-guide-block silhouette: a wide base "shoe" plate that
 // bridges both rails, plus a smaller raised mounting block the robot sits on.
-const CARRIAGE_BASE_WIDTH = 0.34
+export const CARRIAGE_BASE_WIDTH = 0.34
 /** Carriage base "shoe" plate's own depth (Pitfall D — exported so
  * `src/gcode/toolpath-anchor.ts` (D-06) can derive the carriage's real
  * forward-most face instead of a reach-envelope fraction unrelated to the
@@ -39,6 +39,28 @@ const CARRIAGE_BLOCK_WIDTH = 0.22
  * rig's actual footprint). */
 export const CARRIAGE_BLOCK_DEPTH = 0.22
 const CARRIAGE_BLOCK_HEIGHT = 0.1
+
+// U-4: a chosen, cosmetic margin — NOT a sourced hardware spec (same honesty
+// convention `rail.ts` and `singularity.ts` apply to their own chosen
+// constants) — for how much visible track must remain beyond the carriage's
+// outer edge at each travel extreme, on top of the carriage's own
+// half-footprint. The prior flat `TRACK_OVERHANG = 0.15` literal was smaller
+// than the carriage's own half-width at some travel extremes, so the
+// rendered track ended before the carriage/robot did (the reported defect).
+export const TRACK_END_MARGIN = 0.3
+/** Margin past each travel limit so the carriage (and the robot standing on
+ * it) is always visibly still over the rail track at both travel extremes —
+ * the carriage's own half-footprint plus `TRACK_END_MARGIN` of real track
+ * beyond that. The end-stop blocks stay exactly at `RAIL_TRAVEL.min/.max`;
+ * the track now visibly continues past them, which is how real linear-rail
+ * hardware reads. */
+export const TRACK_OVERHANG = CARRIAGE_BASE_WIDTH / 2 + TRACK_END_MARGIN
+
+// Discrete end-stop blocks (short and wide, not tall thin fins) spanning
+// across both rails at each physical travel limit.
+export const END_STOP_WIDTH = 0.07 // thin along the travel (X) axis
+export const END_STOP_HEIGHT = 0.12 // short block, sits just above rail height
+export const END_STOP_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.02 // spans both rails plus a small lip
 
 /** Overall rail run length, exported for CellScene's footprint-sized floor
  * (checkpoint follow-up, item 3) — the floor must never restate this span. */

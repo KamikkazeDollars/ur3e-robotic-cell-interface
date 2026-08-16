@@ -115,6 +115,38 @@ export const TOOLPATH_ANCHOR_OFFSET = {
   z: CARRIAGE_FRONT_FACE_Z + TOOLPATH_CLEARANCE_MARGIN,
 } as const
 
+// --- Workbench footprint (U-2) --------------------------------------------
+// Moved here from `src/scene/Workbench.tsx` so the pose-collision module
+// (`src/collision/pose-collision.ts`) never has to import a React component
+// just to read the bench's footprint — both the rendered bench and the
+// collision envelope must read one derivation of the same footprint.
+// Verbatim carry-over of what was previously private to Workbench.tsx.
+
+/** Small explicit standoff beyond the carriage's own front face so the
+ * tabletop's near edge can never touch the carriage — independent of
+ * `TOOLPATH_CLEARANCE_MARGIN`, which governs how far the toolpath floats
+ * beyond the tabletop, not the tabletop's own footprint. */
+const NEAR_EDGE_STANDOFF = 0.02
+
+/** Generous pad beyond the toolpath anchor's own Z so both bundled samples'
+ * full Z extents stay on the tabletop, not hanging off its far edge. */
+const FAR_EDGE_PAD = 0.15
+
+/** Tabletop width (X), generous enough to cover both samples' X spans with
+ * margin. Exported as `WORKBENCH_WIDTH_X` so both `Workbench.tsx` and
+ * `pose-collision.ts` read the same value. */
+export const WORKBENCH_WIDTH_X = 0.5
+
+/** Tabletop slab thickness (Y). */
+export const WORKBENCH_THICKNESS_Y = 0.04
+
+/** Tabletop's near (carriage-facing) Z edge — never a second, independently
+ * guessed literal; traces back to the carriage's own front face. */
+export const WORKBENCH_NEAR_Z = CARRIAGE_FRONT_FACE_Z + NEAR_EDGE_STANDOFF
+
+/** Tabletop's far Z edge — traces back to the toolpath anchor's own Z. */
+export const WORKBENCH_FAR_Z = TOOLPATH_ANCHOR_OFFSET.z + FAR_EDGE_PAD
+
 /**
  * G-04-1 gap closure: the mode-aware sibling of `TOOLPATH_ANCHOR_OFFSET`
  * above. Only the station ALONG THE RAIL is mode-dependent — the bench-top

@@ -1,22 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { TAB_DEFS, DEFAULT_TAB_ID, cellModeForTab } from './tab-registry'
+import { TAB_DEFS, DEFAULT_TAB_ID } from './tab-registry'
 import { PANELS } from '../shell/TabPanel'
 
-const EXPECTED_IDS = ['printing', 'milling', 'dashboard']
-
-describe('tab-registry — TAB_DEFS', () => {
-  it('contains exactly 3 entries', () => {
-    expect(TAB_DEFS).toHaveLength(3)
+describe('tab-registry — TAB_DEFS (quick 260816-nup, U-5 revert)', () => {
+  it('contains exactly 1 entry', () => {
+    expect(TAB_DEFS).toHaveLength(1)
   })
 
-  it('has an id set exactly equal to printing/milling/dashboard', () => {
-    const ids = TAB_DEFS.map((tab) => tab.id).sort()
-    expect(ids).toEqual([...EXPECTED_IDS].sort())
-  })
-
-  it('has no duplicate ids', () => {
+  it('has an id of exactly "dashboard"', () => {
     const ids = TAB_DEFS.map((tab) => tab.id)
-    expect(new Set(ids).size).toBe(ids.length)
+    expect(ids).toEqual(['dashboard'])
   })
 
   it('gives every entry a non-empty label', () => {
@@ -42,15 +35,13 @@ describe('tab-registry — TAB_DEFS', () => {
     }
     expect(panelKeys).toEqual(registryIds)
   })
-})
 
-describe('cellModeForTab', () => {
-  it('returns the mode itself for the two mode tabs', () => {
-    expect(cellModeForTab('printing')).toBe('printing')
-    expect(cellModeForTab('milling')).toBe('milling')
-  })
-
-  it('returns null for the dashboard tab', () => {
-    expect(cellModeForTab('dashboard')).toBeNull()
+  // U-5 regression guard: a future edit must not quietly reintroduce the
+  // two cell-mode tabs this plan removed — Printing/Milling now live only
+  // in the compact top `ModeBar`.
+  it('contains neither of the two cell-mode ids', () => {
+    const ids = TAB_DEFS.map((tab) => tab.id)
+    expect(ids).not.toContain('printing')
+    expect(ids).not.toContain('milling')
   })
 })

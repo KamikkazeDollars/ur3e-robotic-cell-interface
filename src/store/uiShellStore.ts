@@ -1,8 +1,8 @@
 import { create } from 'zustand'
-import { DEFAULT_TAB_ID, cellModeForTab, type TabId } from '../ui/tabs/tab-registry'
+import type { TabId } from '../ui/tabs/tab-registry'
 import type { CellMode } from '../cell-mode'
 
-/** Which mode the cell is set to — drives the ModeBar segmented control and
+/** Which mode the cell is set to — drives `ModeBar`'s segmented control and
  * the mounted-tool chip.
  *
  * Boundary revision (G-04-1 gap closure, 04-06-PLAN.md): `cellMode` is now a
@@ -38,35 +38,31 @@ export type { CellMode }
  * later phase can delete or rewire this store without touching simulation
  * state.
  *
- * Quick 260816-m6d: the tab id and the cell mode are now deliberately
- * COUPLED for two of the three tabs (printing/milling), and that coupling
- * lives here, in `setActiveTab`, rather than in `TabRail.tsx`. Clicking the
- * Printing or Milling tab both switches the visible panel AND reconfigures
- * which mode the cell is set to, in the same `set()` call, so the two can
- * never observably disagree for even one render. `setCellMode` remains the
- * store's own mode setter, but the tab rail is now its only UI-facing
- * dispatcher — nothing else in the app should call it directly.
+ * U-5 revert (quick 260816-nup): quick 260816-m6d coupled the tab id and
+ * the cell mode together (clicking Printing/Milling both switched the
+ * visible panel AND the cell mode). With Printing/Milling moved back to
+ * the compact top `ModeBar` and the rail down to a single toggleable
+ * Dashboard entry, that coupling has no tab left to live on — `cellMode`
+ * dispatch is once again ONLY `setCellMode`, called directly by `ModeBar`.
+ *
+ * `activeTab` is now `TabId | null`, defaulting to `null`: with
+ * Printing/Milling no longer tabs, a permanently-docked single-tab panel
+ * would keep eating scene width for no navigational reason, so the one
+ * remaining tab is a TOGGLE (`setActiveTab` re-selecting the already-active
+ * tab closes it) and the app opens on the full-width scene, exactly as it
+ * did before the tab rail existed at all.
  */
 interface UiShellState {
-  activeTab: TabId
+  activeTab: TabId | null
   setActiveTab: (id: TabId) => void
   cellMode: CellMode
   setCellMode: (mode: CellMode) => void
 }
 
-export const useUiShellStore = create<UiShellState>((set) => ({
-  activeTab: DEFAULT_TAB_ID,
+export const useUiShellStore = create<UiShellState>((set, get) => ({
+  activeTab: null,
   setActiveTab: (id) => {
-    const mode = cellModeForTab(id)
-    if (mode) {
-      // Printing/Milling: switch the visible tab AND the cell mode together
-      // — opening one of the two mode tabs IS choosing that mode.
-      set({ activeTab: id, cellMode: mode })
-    } else {
-      // Dashboard: opening it must not change which mode the cell is
-      // configured for.
-      set({ activeTab: id })
-    }
+    set({ activeTab: get().activeTab === id ? null : id })
   },
   cellMode: 'printing',
   setCellMode: (mode) => set({ cellMode: mode }),

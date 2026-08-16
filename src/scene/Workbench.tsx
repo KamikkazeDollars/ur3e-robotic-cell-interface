@@ -1,7 +1,9 @@
 import {
-  CARRIAGE_FRONT_FACE_Z,
-  TOOLPATH_ANCHOR_OFFSET,
   WORKBENCH_TOP_Y,
+  WORKBENCH_WIDTH_X,
+  WORKBENCH_THICKNESS_Y,
+  WORKBENCH_NEAR_Z,
+  WORKBENCH_FAR_Z,
   toolpathAnchorForMode,
 } from '../gcode/toolpath-anchor'
 import { useUiShellStore } from '../store/uiShellStore'
@@ -10,21 +12,14 @@ import { SCENE_PALETTE } from './scene-palette'
 // The bench is a deliberately distinct mid tone (SCENE_PALETTE.workbench),
 // chosen so the toolpath drawn on this surface stays readable against it.
 
-// Small explicit standoff beyond the carriage's own front face so the
-// tabletop's near edge can never touch the carriage — independent of
-// TOOLPATH_CLEARANCE_MARGIN, which governs how far the toolpath floats
-// beyond the tabletop, not the tabletop's own footprint.
-const NEAR_EDGE_STANDOFF = 0.02
-
-// Generous pad beyond the toolpath anchor's own Z so both bundled samples'
-// full Z extents stay on the tabletop, not hanging off its far edge.
-const FAR_EDGE_PAD = 0.15
-
-// Tabletop width (X), generous enough to cover both samples' X spans with margin.
-const TABLETOP_WIDTH = 0.5
-
-// Tabletop slab thickness (Y).
-const TABLETOP_THICKNESS = 0.04
+// U-2: the footprint constants this component used to declare privately
+// (NEAR_EDGE_STANDOFF, FAR_EDGE_PAD, TABLETOP_WIDTH, TABLETOP_THICKNESS, and
+// the derived near/far Z edges) now live in `src/gcode/toolpath-anchor.ts`
+// as WORKBENCH_WIDTH_X / WORKBENCH_THICKNESS_Y / WORKBENCH_NEAR_Z /
+// WORKBENCH_FAR_Z, so both the rendered bench and the pose-collision
+// envelope (`src/collision/pose-collision.ts`) read one footprint. This
+// component derives its remaining locals from those imports — the rendered
+// bench is pixel-identical to before, this is a move, not a redesign.
 
 // Leg cross-section (square) and how far each leg is inset from the
 // tabletop's actual edges, so the four legs read as structural supports
@@ -32,32 +27,29 @@ const TABLETOP_THICKNESS = 0.04
 const LEG_SECTION = 0.03
 const LEG_INSET = 0.04
 
-// Derived tabletop Z span: never a second, independently guessed literal —
-// both edges trace back to the carriage front face / toolpath anchor.
-const TABLETOP_NEAR_Z = CARRIAGE_FRONT_FACE_Z + NEAR_EDGE_STANDOFF
-const TABLETOP_FAR_Z = TOOLPATH_ANCHOR_OFFSET.z + FAR_EDGE_PAD
-const TABLETOP_DEPTH = TABLETOP_FAR_Z - TABLETOP_NEAR_Z
-const TABLETOP_CENTER_Z = TABLETOP_NEAR_Z + TABLETOP_DEPTH / 2
+const TABLETOP_DEPTH = WORKBENCH_FAR_Z - WORKBENCH_NEAR_Z
+const TABLETOP_CENTER_Z = WORKBENCH_NEAR_Z + TABLETOP_DEPTH / 2
 
 // Tabletop's *top* surface, not its centre, must land exactly at
 // WORKBENCH_TOP_Y (the same value the toolpath anchor's Y reads).
-const TABLETOP_CENTER_Y = WORKBENCH_TOP_Y - TABLETOP_THICKNESS / 2
+const TABLETOP_CENTER_Y = WORKBENCH_TOP_Y - WORKBENCH_THICKNESS_Y / 2
 
 // Legs reach from the floor (world Y = 0) up to the tabletop's underside.
-const LEG_HEIGHT = WORKBENCH_TOP_Y - TABLETOP_THICKNESS
+const LEG_HEIGHT = WORKBENCH_TOP_Y - WORKBENCH_THICKNESS_Y
 const LEG_CENTER_Y = LEG_HEIGHT / 2
 
-const LEG_HALF_WIDTH = TABLETOP_WIDTH / 2 - LEG_INSET
+const LEG_HALF_WIDTH = WORKBENCH_WIDTH_X / 2 - LEG_INSET
 const LEG_X_OFFSETS = [-LEG_HALF_WIDTH, LEG_HALF_WIDTH] as const
-const LEG_Z_POSITIONS = [TABLETOP_NEAR_Z + LEG_INSET, TABLETOP_FAR_Z - LEG_INSET] as const
+const LEG_Z_POSITIONS = [WORKBENCH_NEAR_Z + LEG_INSET, WORKBENCH_FAR_Z - LEG_INSET] as const
 
 /**
  * G-02-01: a simple table the toolpath visibly rests on — one flat tabletop
  * slab plus four square-section legs reaching to the floor. Every dimension
  * is derived from `src/gcode/toolpath-anchor.ts`'s exported constants
- * (`CARRIAGE_FRONT_FACE_Z`, `TOOLPATH_ANCHOR_OFFSET`, `WORKBENCH_TOP_Y`) —
- * this component never restates the toolpath's anchor position or the
- * carriage's front face as a second, independently guessed literal.
+ * (`WORKBENCH_WIDTH_X`, `WORKBENCH_THICKNESS_Y`, `WORKBENCH_NEAR_Z`,
+ * `WORKBENCH_FAR_Z`, `WORKBENCH_TOP_Y`) — this component never restates the
+ * toolpath's anchor position or the carriage's front face as a second,
+ * independently guessed literal.
  *
  * G-04-1 gap closure (04-06-PLAN.md): the bench now travels with the cell's
  * configured station. It subscribes to `cellMode` (the same single-field
@@ -82,7 +74,7 @@ export default function Workbench() {
         receiveShadow
         castShadow
       >
-        <boxGeometry args={[TABLETOP_WIDTH, TABLETOP_THICKNESS, TABLETOP_DEPTH]} />
+        <boxGeometry args={[WORKBENCH_WIDTH_X, WORKBENCH_THICKNESS_Y, TABLETOP_DEPTH]} />
         <meshStandardMaterial color={SCENE_PALETTE.workbench.hex} />
       </mesh>
 
