@@ -667,6 +667,96 @@ describe('useCellStore — manualJogError (quick 260816-nup, U-1/U-2/U-3)', () =
   })
 })
 
+describe('useCellStore — homeManualPose (quick 260816-qym, U-4)', () => {
+  beforeEach(() => {
+    useCellStore.setState({
+      manualJog: null,
+      manualJogError: null,
+      trajectory: null,
+      lastRailPos: RAIL_CENTER_X,
+    })
+    useUiShellStore.setState({ cellMode: 'printing' })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useCellStore.setState({ isPlaying: false })
+  })
+
+  it('parks all 6 joints at UR3E_PARKED_POSE and the rail at RAIL_CENTER_X, in one call, from a non-parked manual pose', () => {
+    // wrist_3 (index 5) rotates about its own tool axis and moves no frame
+    // origin — a geometrically inert, always-accepted nudge off the parked
+    // pose, so this test actually proves homeManualPose MOVES the robot
+    // rather than finding it already parked.
+    useCellStore.getState().setManualJointAngle(5, 0.2)
+    expect(useCellStore.getState().manualJog?.joints[5]).not.toBe(UR3E_PARKED_POSE[5])
+
+    useCellStore.getState().homeManualPose()
+
+    expect(useCellStore.getState().manualJog?.joints).toEqual(UR3E_PARKED_POSE)
+    expect(useCellStore.getState().manualJog?.railPos).toBe(RAIL_CENTER_X)
+  })
+
+  it('stops playback — isPlaying goes false', () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().isPlaying).toBe(true)
+
+    useCellStore.getState().homeManualPose()
+    expect(useCellStore.getState().isPlaying).toBe(false)
+  })
+
+  it('clears a set manualJogError', () => {
+    // Elbow driven to its travel limit, which coincides with the elbow
+    // singularity (260816-nup) — refused, sets manualJogError.
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJogError).not.toBeNull()
+
+    useCellStore.getState().homeManualPose()
+    expect(useCellStore.getState().manualJogError).toBeNull()
+  })
+
+  it('leaves scrubFraction, playbackStarted, trajectory, toolpath, and uploadedJobs untouched — it parks the robot, it does not unload the job', async () => {
+    const printGcode = 'G1 X10 Y0 Z0 F100\nG1 X10 Y10 Z0\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+    await useCellStore.getState().selectSample('print')
+    useCellStore.getState().play()
+    useCellStore.getState().setScrubFraction(0.4)
+    useCellStore.getState().pause()
+
+    const trajectoryBefore = useCellStore.getState().trajectory
+    const toolpathBefore = useCellStore.getState().toolpath
+    const uploadedJobsBefore = useCellStore.getState().uploadedJobs
+    const scrubBefore = useCellStore.getState().scrubFraction
+    const playbackStartedBefore = useCellStore.getState().playbackStarted
+    expect(scrubBefore).toBe(0.4)
+    expect(playbackStartedBefore).toBe(true)
+
+    useCellStore.getState().homeManualPose()
+
+    expect(useCellStore.getState().trajectory).toBe(trajectoryBefore)
+    expect(useCellStore.getState().toolpath).toBe(toolpathBefore)
+    expect(useCellStore.getState().uploadedJobs).toBe(uploadedJobsBefore)
+    expect(useCellStore.getState().scrubFraction).toBe(scrubBefore)
+    expect(useCellStore.getState().playbackStarted).toBe(playbackStartedBefore)
+    // The parked pose itself DID commit — proves homeManualPose ran, not
+    // that it silently no-op'd.
+    expect(useCellStore.getState().manualJog?.joints).toEqual(UR3E_PARKED_POSE)
+  })
+
+  it('validateManualPose is still consulted — the committed home pose passes the gate rather than skipping it', () => {
+    useCellStore.getState().homeManualPose()
+    expect(useCellStore.getState().manualJog).not.toBeNull()
+    expect(useCellStore.getState().manualJog?.joints).toEqual(UR3E_PARKED_POSE)
+    expect(useCellStore.getState().manualJog?.railPos).toBe(RAIL_CENTER_X)
+    expect(useCellStore.getState().manualJogError).toBeNull()
+  })
+})
+
 describe('useCellStore — per-mode uploads (quick 260816-m6d)', () => {
   afterEach(() => {
     vi.unstubAllGlobals()

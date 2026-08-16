@@ -7,6 +7,7 @@ import {
   RAIL_CENTER_X,
   clampRailPosition,
   clampJointAngle,
+  clampJointAngles,
   UR3E_PARKED_POSE,
   type JointAngles,
 } from '../kinematics'
@@ -234,6 +235,21 @@ interface CellState {
    * field is not already at its cleared value, so a repeated call cannot
    * churn subscribers. */
   clearManualJog: () => void
+  /** Recovery action (quick 260816-qym, U-4): parks all 6 joints at
+   * `UR3E_PARKED_POSE` and the rail at `RAIL_CENTER_X` through the SAME
+   * `commitManualJog` gate every other manual-jog write uses — not a
+   * bypass. Stops the playback clock FIRST (`pause()`), so the displayed
+   * running/paused state cannot disagree with the parked robot the user is
+   * now looking at: without this, the clock would keep advancing while
+   * `manualJog` visually overrides the rendered pose, a silent
+   * disagreement this call exists to remove. Usable mid-simulation — while
+   * a job is playing OR paused.
+   *
+   * Deliberately does NOT touch `scrubFraction`, `trajectory`,
+   * `playbackStarted`, `toolpath`, or `uploadedJobs`: this is a recovery
+   * action, not a job reset. Pressing Play afterwards already hands
+   * control back to the toolpath, because `play()` calls `clearManualJog()`. */
+  homeManualPose: () => void
   /** Per-mode uploaded job, `null` when that mode has no upload active
    * (quick 260816-m6d). Keyed per `CellMode` so a file uploaded on one tab
    * can never replace the other tab's job. */
@@ -490,6 +506,15 @@ export const useCellStore = create<CellState>((set, get) => {
       if (get().manualJog !== null || get().manualJogError !== null) {
         set({ manualJog: null, manualJogError: null })
       }
+    },
+    homeManualPose: () => {
+      // Stop the clock BEFORE swapping the pose — see this field's own doc
+      // comment in the CellState interface above.
+      get().pause()
+      commitManualJog({
+        joints: clampJointAngles(UR3E_PARKED_POSE),
+        railPos: clampRailPosition(RAIL_CENTER_X),
+      })
     },
     uploadedJobs: { printing: null, milling: null },
     loadUploadedGcode: async (mode, fileName, text) => {

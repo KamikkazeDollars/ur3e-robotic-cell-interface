@@ -1,6 +1,7 @@
 import { RAIL_TRAVEL, RAIL_CENTER_X } from '../kinematics'
 import RobotModel from './RobotModel'
 import { SCENE_PALETTE } from './scene-palette'
+import { ROBOT_FOOTPRINT_HALF_WIDTH_X } from './robot-footprint'
 
 // The rail hardware's tone is the palette's lightest structural tone
 // (SCENE_PALETTE.rail) — this file no longer declares any color of its own.
@@ -40,21 +41,37 @@ const CARRIAGE_BLOCK_WIDTH = 0.22
 export const CARRIAGE_BLOCK_DEPTH = 0.22
 const CARRIAGE_BLOCK_HEIGHT = 0.1
 
-// U-4: a chosen, cosmetic margin — NOT a sourced hardware spec (same honesty
-// convention `rail.ts` and `singularity.ts` apply to their own chosen
-// constants) — for how much visible track must remain beyond the carriage's
-// outer edge at each travel extreme, on top of the carriage's own
-// half-footprint. The prior flat `TRACK_OVERHANG = 0.15` literal was smaller
-// than the carriage's own half-width at some travel extremes, so the
-// rendered track ended before the carriage/robot did (the reported defect).
-export const TRACK_END_MARGIN = 0.3
-/** Margin past each travel limit so the carriage (and the robot standing on
- * it) is always visibly still over the rail track at both travel extremes —
- * the carriage's own half-footprint plus `TRACK_END_MARGIN` of real track
+// U-2 (quick 260816-qym): root cause of the still-reported overhang defect
+// after the FIRST fix attempt (which grew `TRACK_OVERHANG` from
+// `CARRIAGE_BASE_WIDTH / 2 + TRACK_END_MARGIN`): `CARRIAGE_BASE_WIDTH`
+// describes the mounting PLATE the robot is bolted to, not the robot's own
+// rendered extent. No amount of margin stacked on top of the plate's
+// half-width could guarantee the ARM stayed over the track, because the
+// constant being measured was the wrong object — the plate is ~0.17m
+// half-width, but the arm itself reaches roughly 0.83m from the mount at
+// its worst-case joint-limit pose (`ROBOT_FOOTPRINT_HALF_WIDTH_X`,
+// `./robot-footprint.ts`, measured from the shipped collision meshes and an
+// FK keypoint sweep — full provenance in that file). `TRACK_OVERHANG` below
+// now reads that measured figure instead.
+//
+// `TRACK_END_MARGIN` is still a chosen, cosmetic margin — NOT a sourced
+// hardware spec (same honesty convention `rail.ts` and `singularity.ts`
+// apply to their own chosen constants) — for how much visible track must
+// remain beyond the robot's measured worst-case reach at each travel
+// extreme. Reduced from 0.3 to 0.2 deliberately, not a regression: the
+// previous 0.3 existed to paper over an UNDER-measured footprint
+// (`CARRIAGE_BASE_WIDTH / 2`); it now stacks on top of a real measured
+// worst-case extent rather than a stand-in, so a smaller margin still
+// leaves more real clearance than before.
+export const TRACK_END_MARGIN = 0.2
+/** Margin past each travel limit so the carriage AND the robot standing on
+ * it are always visibly still over the rail track at both travel extremes —
+ * the robot's own measured worst-case footprint half-width
+ * (`ROBOT_FOOTPRINT_HALF_WIDTH_X`) plus `TRACK_END_MARGIN` of real track
  * beyond that. The end-stop blocks stay exactly at `RAIL_TRAVEL.min/.max`;
  * the track now visibly continues past them, which is how real linear-rail
  * hardware reads. */
-export const TRACK_OVERHANG = CARRIAGE_BASE_WIDTH / 2 + TRACK_END_MARGIN
+export const TRACK_OVERHANG = ROBOT_FOOTPRINT_HALF_WIDTH_X + TRACK_END_MARGIN
 
 // Discrete end-stop blocks (short and wide, not tall thin fins) spanning
 // across both rails at each physical travel limit.
