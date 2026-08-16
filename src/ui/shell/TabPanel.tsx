@@ -2,27 +2,22 @@ import type { ComponentType } from 'react'
 import { type TabId } from '../tabs/tab-registry'
 import { useUiShellStore } from '../../store/uiShellStore'
 import DashboardPanel from '../tabs/DashboardPanel'
-import OperationsPanel from '../tabs/OperationsPanel'
-import SetupPanel from '../tabs/SetupPanel'
-import VisionPanel from '../tabs/VisionPanel'
-import CalibratePanel from '../tabs/CalibratePanel'
-import IoPanel from '../tabs/IoPanel'
-import OptimizationPanel from '../tabs/OptimizationPanel'
+import JobPanel from '../tabs/JobPanel'
+
+// Thin module-scope wrappers over the shared `JobPanel` so `PANELS` below
+// stays a flat `Record<TabId, ComponentType>` — no per-tab prop plumbing
+// needed at the router level.
+const PrintingPanel = () => <JobPanel mode="printing" />
+const MillingPanel = () => <JobPanel mode="milling" />
 
 // Typed as `Record<TabId, ComponentType>` so TypeScript itself fails the
-// build if a registry id has no panel behind it. Every value below is a
-// real, phase-labelled placeholder panel from `src/ui/tabs/` — none of
-// them import the simulation store or compute anything from a trajectory
-// (Task 3 gate: `tab-registry.test.ts` Test 6 plus the plan's cellStore
-// import grep).
+// build if a registry id has no panel behind it (Task 3 gate:
+// `tab-registry.test.ts` Test 6 — every registry id resolves to a defined
+// panel and `PANELS` has no orphan key).
 export const PANELS: Record<TabId, ComponentType> = {
+  printing: PrintingPanel,
+  milling: MillingPanel,
   dashboard: DashboardPanel,
-  operations: OperationsPanel,
-  setup: SetupPanel,
-  vision: VisionPanel,
-  calibrate: CalibratePanel,
-  io: IoPanel,
-  optimization: OptimizationPanel,
 }
 
 const panelStyle: React.CSSProperties = {

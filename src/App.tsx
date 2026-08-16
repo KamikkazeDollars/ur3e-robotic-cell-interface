@@ -6,7 +6,6 @@ import ScrubControl from './ui/ScrubControl'
 import SceneStatusOverlay from './ui/SceneStatusOverlay'
 import TabRail from './ui/shell/TabRail'
 import TabPanel from './ui/shell/TabPanel'
-import ModeBar from './ui/shell/ModeBar'
 import useCellModeSampleSync from './ui/useCellModeSampleSync'
 
 function App() {
@@ -22,7 +21,6 @@ function App() {
       <SceneStatusOverlay />
       <TabRail />
       <TabPanel />
-      <ModeBar />
       {/* Peripheral overlay, `lg` (24px) padding from the viewport edges — a
           secondary control that must not compete with the robot for
           attention (UI-SPEC "Color" visual-focal-point rule). Mirrors the
