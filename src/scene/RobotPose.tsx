@@ -45,10 +45,27 @@ interface RobotPoseProps {
  * in the DH-native frame `setJointValue` expects (once corrected); the
  * one-time z-up -> y-up frame rotation is `RobotModel.tsx`'s own concern,
  * set once on load.
+ *
+ * Manual jog (quick 260816-m6d): when `manualJog` is non-null (the
+ * Dashboard's typed joint/rail controls are commanding a pose), it wins over
+ * the trajectory sample and this returns early — a manually commanded pose
+ * always overrides whatever the compiled trajectory would otherwise show.
+ * Routed through `toUrdfJointAngles` exactly like the solved-sample path
+ * below: the URDF's `base_link_inertia` frame divergence applies to a
+ * manually commanded pose just as much as a solved one.
  */
 export default function RobotPose({ robot }: RobotPoseProps) {
   useFrame(() => {
-    const { trajectory, livePlayback } = useCellStore.getState()
+    const { trajectory, livePlayback, manualJog } = useCellStore.getState()
+
+    if (manualJog) {
+      const urdfJoints = toUrdfJointAngles(manualJog.joints)
+      UR3E_JOINT_NAMES.forEach((jointName, i) => {
+        robot.setJointValue(jointName, urdfJoints[i])
+      })
+      return
+    }
+
     if (!trajectory || trajectory.samples.length === 0) return
 
     const sample = sampleAtFraction(trajectory, livePlayback.fraction)

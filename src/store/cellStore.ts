@@ -3,7 +3,13 @@ import { GCODE_SAMPLES } from '../gcode/samples'
 import { parseToolpath, type ParsedToolpath } from '../gcode/parseToolpath'
 import { toolpathAnchorForMode } from '../gcode/toolpath-anchor'
 import { compileTrajectory, type CompiledTrajectory } from '../trajectory/compile'
-import { RAIL_CENTER_X } from '../kinematics'
+import {
+  RAIL_CENTER_X,
+  clampRailPosition,
+  clampJointAngle,
+  UR3E_PARKED_POSE,
+  type JointAngles,
+} from '../kinematics'
 import { useUiShellStore } from './uiShellStore'
 
 /**
@@ -165,6 +171,31 @@ interface CellState {
    * dropdown pick still gets.
    */
   selectSample: (sampleId: string, origin?: SelectSampleOrigin) => Promise<void>
+  /**
+   * Manually commanded joint/rail pose from the Dashboard's typed
+   * manual-jog controls (quick 260816-m6d). `null` means "the compiled
+   * trajectory drives the robot" — today's only behaviour, so nothing
+   * changes until the user types something.
+   *
+   * This field is allowed in a store whose own file header forbids
+   * per-frame values because it changes at HUMAN TYPING cadence, not
+   * per-animation-frame — its per-frame consumer (`RobotPose.tsx`) reads it
+   * non-reactively via `getState()` inside `useFrame`, exactly like
+   * `trajectory`/`livePlayback` above.
+   */
+  manualJog: { joints: JointAngles; railPos: number } | null
+  /** Seeds `manualJog` from `UR3E_PARKED_POSE` and the current rail position
+   * when it is currently null, then writes the clamped angle into the
+   * indexed slot of a NEW tuple — never mutates the existing one, since
+   * Zustand subscribers compare by reference. */
+  setManualJointAngle: (jointIndex: number, radians: number) => void
+  /** Same seeding rule as `setManualJointAngle`, then clamps into
+   * `RAIL_TRAVEL` via `clampRailPosition`. */
+  setManualRailPos: (metres: number) => void
+  /** Returns `manualJog` to `null`, handing control back to the compiled
+   * trajectory. Only calls `set()` when it is not already null, so a
+   * repeated call cannot churn subscribers. */
+  clearManualJog: () => void
 }
 
 /**
@@ -198,7 +229,12 @@ export const useCellStore = create<CellState>((set, get) => ({
     set({ scrubFraction: clamped })
   },
   isPlaying: false,
-  play: () => set({ isPlaying: true }),
+  play: () => {
+    // Pressing Play means "run the toolpath" — it must take the robot back
+    // off manual command (quick 260816-m6d).
+    get().clearManualJog()
+    set({ isPlaying: true })
+  },
   pause: () => set({ isPlaying: false }),
   livePlayback: { fraction: 0 },
   selectSample: async (sampleId, origin = 'manual') => {
@@ -211,6 +247,7 @@ export const useCellStore = create<CellState>((set, get) => ({
       // so an unknown sampleId can't leave the marker/robot pose parked at a
       // stale fraction left over from whatever was selected before.
       get().livePlayback.fraction = 0
+      get().clearManualJog()
       set({
         selectedSampleId: sampleId,
         toolpathLoadStatus: 'error',
@@ -227,6 +264,7 @@ export const useCellStore = create<CellState>((set, get) => ({
     // being torn down (toolpath/trajectory: null above), so its scrub
     // position must go with it rather than surviving into the new load.
     get().livePlayback.fraction = 0
+    get().clearManualJog()
     set({
       selectedSampleId: sampleId,
       toolpathLoadStatus: 'parsing',
@@ -274,6 +312,7 @@ export const useCellStore = create<CellState>((set, get) => ({
       // scrubFraction so picking a new sample mid-run stops the clock
       // instead of animating a stale position against a fresh trajectory.
       get().livePlayback.fraction = 0
+      get().clearManualJog()
       set({
         toolpath,
         toolpathLoadStatus: 'ready',
@@ -292,6 +331,7 @@ export const useCellStore = create<CellState>((set, get) => ({
       // error status over a newer selection that already succeeded.
       if (requestId !== selectSampleRequestId) return
       get().livePlayback.fraction = 0
+      get().clearManualJog()
       set({
         toolpathLoadStatus: 'error',
         toolpath: null,
@@ -301,5 +341,25 @@ export const useCellStore = create<CellState>((set, get) => ({
         lastSelectSampleOrigin: origin,
       })
     }
+  },
+  manualJog: null,
+  setManualJointAngle: (jointIndex, radians) => {
+    const seed = get().manualJog ?? {
+      joints: UR3E_PARKED_POSE,
+      railPos: get().trajectory?.railPos ?? get().lastRailPos,
+    }
+    const nextJoints = [...seed.joints] as JointAngles
+    nextJoints[jointIndex] = clampJointAngle(jointIndex, radians)
+    set({ manualJog: { joints: nextJoints, railPos: seed.railPos } })
+  },
+  setManualRailPos: (metres) => {
+    const seed = get().manualJog ?? {
+      joints: UR3E_PARKED_POSE,
+      railPos: get().trajectory?.railPos ?? get().lastRailPos,
+    }
+    set({ manualJog: { joints: seed.joints, railPos: clampRailPosition(metres) } })
+  },
+  clearManualJog: () => {
+    if (get().manualJog !== null) set({ manualJog: null })
   },
 }))

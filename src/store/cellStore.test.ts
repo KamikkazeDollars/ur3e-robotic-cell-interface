@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { useCellStore } from './cellStore'
 import { useUiShellStore } from './uiShellStore'
-import { RAIL_CENTER_X } from '../kinematics'
+import { RAIL_CENTER_X, RAIL_TRAVEL, UR3E_JOINT_LIMITS, UR3E_PARKED_POSE } from '../kinematics'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from '../scene/camera-defaults'
 
 describe('useCellStore', () => {
@@ -483,5 +483,63 @@ describe('useCellStore — lastRailPos fallback (04-REVIEW CR-01)', () => {
     expect(printRailPos as number).toBeLessThanOrEqual(hi)
     expect(millRailPos as number).toBeGreaterThanOrEqual(lo)
     expect(millRailPos as number).toBeLessThanOrEqual(hi)
+  })
+})
+
+describe('useCellStore — manualJog (quick 260816-m6d)', () => {
+  beforeEach(() => {
+    useCellStore.setState({ manualJog: null, trajectory: null, lastRailPos: RAIL_CENTER_X })
+  })
+
+  it('starts at null', () => {
+    expect(useCellStore.getState().manualJog).toBeNull()
+  })
+
+  it('setManualJointAngle clamps an out-of-range value onto the real joint limit', () => {
+    useCellStore.getState().setManualJointAngle(0, 10)
+    expect(useCellStore.getState().manualJog?.joints[0]).toBe(UR3E_JOINT_LIMITS[0].max)
+  })
+
+  it("setManualJointAngle honours the elbow's narrower limit (index 2)", () => {
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJog?.joints[2]).toBe(UR3E_JOINT_LIMITS[2].max)
+  })
+
+  it('setManualRailPos(99) lands on RAIL_TRAVEL.max', () => {
+    useCellStore.getState().setManualRailPos(99)
+    expect(useCellStore.getState().manualJog?.railPos).toBe(RAIL_TRAVEL.max)
+  })
+
+  it('the first manual-jog call seeds the other five joints from UR3E_PARKED_POSE', () => {
+    useCellStore.getState().setManualJointAngle(0, 0.1)
+    const joints = useCellStore.getState().manualJog?.joints
+    expect(joints).toBeDefined()
+    for (let i = 1; i < 6; i++) {
+      expect(joints?.[i]).toBe(UR3E_PARKED_POSE[i])
+    }
+  })
+
+  it('play() returns manualJog to null', () => {
+    useCellStore.getState().setManualJointAngle(0, 0.1)
+    expect(useCellStore.getState().manualJog).not.toBeNull()
+    useCellStore.getState().play()
+    expect(useCellStore.getState().manualJog).toBeNull()
+    // Restore isPlaying so later tests in this file aren't affected.
+    useCellStore.setState({ isPlaying: false })
+  })
+
+  it('each setter produces a new tuple reference on every call', () => {
+    useCellStore.getState().setManualJointAngle(0, 0.1)
+    const firstJoints = useCellStore.getState().manualJog?.joints
+    useCellStore.getState().setManualJointAngle(1, 0.2)
+    const secondJoints = useCellStore.getState().manualJog?.joints
+    expect(secondJoints).not.toBe(firstJoints)
+  })
+
+  it('clearManualJog() is a no-op (no re-render churn) when manualJog is already null', () => {
+    const before = useCellStore.getState()
+    useCellStore.getState().clearManualJog()
+    const after = useCellStore.getState()
+    expect(after).toBe(before)
   })
 })
