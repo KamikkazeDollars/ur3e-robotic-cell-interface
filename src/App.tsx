@@ -6,14 +6,15 @@ import ScrubControl from './ui/ScrubControl'
 import SceneStatusOverlay from './ui/SceneStatusOverlay'
 import TabRail from './ui/shell/TabRail'
 import TabPanel from './ui/shell/TabPanel'
-import useCellModeSampleSync from './ui/useCellModeSampleSync'
+import useModeJobSync from './ui/useModeJobSync'
 
 function App() {
-  // G-04-1 gap closure: mounted once at the shell level so the loaded
-  // sample and the active cell mode can never drift apart. See the hook's
-  // own header comment for why this crossing lives here rather than inside
-  // uiShellStore's setCellMode.
-  useCellModeSampleSync()
+  // G-04-1 gap closure, superseded by quick 260816-m6d's useModeJobSync:
+  // mounted once at the shell level so each mode's job (bundled sample or
+  // upload) loads automatically, including on the initial mount. See the
+  // hook's own header comment for why this crossing lives here rather than
+  // inside uiShellStore's setCellMode.
+  useModeJobSync()
 
   return (
     <>

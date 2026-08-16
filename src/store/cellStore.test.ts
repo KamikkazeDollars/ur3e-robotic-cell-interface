@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { useCellStore } from './cellStore'
+import { useCellStore, MAX_UPLOAD_BYTES, UPLOADED_JOB_ID } from './cellStore'
 import { useUiShellStore } from './uiShellStore'
 import { RAIL_CENTER_X, RAIL_TRAVEL, UR3E_JOINT_LIMITS, UR3E_PARKED_POSE } from '../kinematics'
 import { DEFAULT_CAMERA_POSITION, DEFAULT_CAMERA_TARGET } from '../scene/camera-defaults'
@@ -541,5 +541,107 @@ describe('useCellStore — manualJog (quick 260816-m6d)', () => {
     useCellStore.getState().clearManualJog()
     const after = useCellStore.getState()
     expect(after).toBe(before)
+  })
+})
+
+describe('useCellStore — per-mode uploads (quick 260816-m6d)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useCellStore.setState({ uploadedJobs: { printing: null, milling: null } })
+  })
+
+  it('an upload for printing leaves uploadedJobs.milling null', async () => {
+    const text = 'G1 X10 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'job.gcode', text)
+
+    expect(useCellStore.getState().uploadedJobs.printing).toEqual({ fileName: 'job.gcode', text })
+    expect(useCellStore.getState().uploadedJobs.milling).toBeNull()
+  })
+
+  it('loadUploadedGcode resolves selectedSampleId to the UPLOADED_JOB_ID sentinel on success', async () => {
+    const text = 'G1 X10 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'job.gcode', text)
+
+    expect(useCellStore.getState().selectedSampleId).toBe(UPLOADED_JOB_ID)
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('ready')
+  })
+
+  it("loadJobForMode prefers an uploaded job over the bundled sample", async () => {
+    const uploadedText = 'G1 X5 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'uploaded.gcode', uploadedText)
+    const uploadedToolpath = useCellStore.getState().toolpath
+
+    await useCellStore.getState().loadJobForMode('printing')
+
+    expect(useCellStore.getState().selectedSampleId).toBe(UPLOADED_JOB_ID)
+    // Re-resolved from the SAME uploaded text, not the bundled sample —
+    // both loads parse the identical single-segment g-code above, so their
+    // resulting toolpaths carry the same number of segments as a proxy for
+    // "loaded from the upload, not a fetch".
+    expect(useCellStore.getState().toolpath?.segments.length).toBe(uploadedToolpath?.segments.length)
+  })
+
+  it("over-cap text lands on toolpathLoadStatus: 'error' without recording the entry", async () => {
+    const oversizedText = 'x'.repeat(MAX_UPLOAD_BYTES + 1)
+    useCellStore.setState({ uploadedJobs: { printing: null, milling: null } })
+
+    await useCellStore.getState().loadUploadedGcode('printing', 'huge.gcode', oversizedText)
+
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('error')
+    expect(useCellStore.getState().uploadedJobs.printing).toBeNull()
+  })
+
+  it('an over-cap upload leaves a PREVIOUS upload entry untouched', async () => {
+    const goodText = 'G1 X10 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'good.gcode', goodText)
+    expect(useCellStore.getState().uploadedJobs.printing).toEqual({ fileName: 'good.gcode', text: goodText })
+
+    const oversizedText = 'x'.repeat(MAX_UPLOAD_BYTES + 1)
+    await useCellStore.getState().loadUploadedGcode('printing', 'huge.gcode', oversizedText)
+
+    expect(useCellStore.getState().uploadedJobs.printing).toEqual({ fileName: 'good.gcode', text: goodText })
+  })
+
+  it('a sample selection after an upload still resolves normally', async () => {
+    const uploadedText = 'G1 X5 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'uploaded.gcode', uploadedText)
+    expect(useCellStore.getState().selectedSampleId).toBe(UPLOADED_JOB_ID)
+
+    const printGcode = 'G1 X10 Y0 Z0 F100\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+
+    await useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().selectedSampleId).toBe('print')
+    expect(useCellStore.getState().toolpathLoadStatus).toBe('ready')
+    expect(useCellStore.getState().toolpath).not.toBeNull()
+  })
+
+  it('clearUploadedJob drops the entry and reloads the bundled sample for that mode', async () => {
+    const uploadedText = 'G1 X5 Y0 Z0 F100\n'
+    await useCellStore.getState().loadUploadedGcode('printing', 'uploaded.gcode', uploadedText)
+    expect(useCellStore.getState().uploadedJobs.printing).not.toBeNull()
+
+    const printGcode = 'G1 X10 Y0 Z0 F100\nG1 X10 Y10 Z0\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+
+    useCellStore.getState().clearUploadedJob('printing')
+    // clearUploadedJob dispatches loadJobForMode without awaiting it itself
+    // (fire-and-forget, matching the "Use bundled sample" button's click
+    // handler) — wait a tick for the async load to settle.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(useCellStore.getState().uploadedJobs.printing).toBeNull()
+    expect(useCellStore.getState().selectedSampleId).toBe('print')
   })
 })

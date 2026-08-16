@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { GCODE_SAMPLES } from '../gcode/samples'
+import { GCODE_SAMPLES, firstSampleIdForMode, type GcodeSample } from '../gcode/samples'
 import { parseToolpath, type ParsedToolpath } from '../gcode/parseToolpath'
 import { toolpathAnchorForMode } from '../gcode/toolpath-anchor'
 import { compileTrajectory, type CompiledTrajectory } from '../trajectory/compile'
@@ -11,6 +11,7 @@ import {
   type JointAngles,
 } from '../kinematics'
 import { useUiShellStore } from './uiShellStore'
+import type { CellMode } from '../cell-mode'
 
 /**
  * Minimal, coarse-cadence Zustand store — the shape Phases 5-8 extend.
@@ -58,16 +59,40 @@ export type ToolpathLoadStatus = 'idle' | 'parsing' | 'ready' | 'error'
  * follow-up, plan 04-06). A manual dropdown pick (`SampleSelect.tsx`, the
  * default when no origin is passed) wants the existing tight D-05 auto-frame
  * `ToolpathCameraFit.tsx` performs on load. A mode switch's automatic
- * reselection (`useCellModeSampleSync.ts`, dispatched when the loaded sample
- * no longer matches the newly active mode) also flips `toolpathLoadStatus`
- * to 'ready' — the SAME trigger `ToolpathCameraFit.tsx` reacts to — but the
- * user did not ask to zoom in on whichever job the mode-sync silently
- * picked for them; they asked to see the rail sweep across the whole cell.
- * `lastSelectSampleOrigin` lets `ToolpathCameraFit.tsx` tell the two cases
- * apart without `SampleSelect.tsx` having to change at all (its call omits
- * the argument, so it keeps defaulting to 'manual').
+ * reselection (`useModeJobSync.ts`, dispatched whenever `cellMode` changes)
+ * also flips `toolpathLoadStatus` to 'ready' — the SAME trigger
+ * `ToolpathCameraFit.tsx` reacts to — but the user did not ask to zoom in on
+ * whichever job the mode-sync silently picked for them; they asked to see
+ * the rail sweep across the whole cell. `lastSelectSampleOrigin` lets
+ * `ToolpathCameraFit.tsx` tell the two cases apart without `SampleSelect.tsx`
+ * having to change at all (its call omits the argument, so it keeps
+ * defaulting to 'manual').
  */
 export type SelectSampleOrigin = 'manual' | 'mode-sync'
+
+/**
+ * Where a job's g-code text comes from — resolved once at the top of
+ * `loadJobSource` (quick 260816-m6d) and never restated. A bundled sample
+ * fetches its file at `filePath`; an upload already has its text in memory
+ * (read via `File.text()` at the UI layer, before this store ever sees it).
+ */
+type JobSource =
+  | { kind: 'sample'; sampleId: string }
+  | { kind: 'upload'; mode: CellMode; fileName: string; text: string }
+
+/** Size cap (bytes, approximated by JS string length — g-code is plain
+ * ASCII/UTF-8 text, so this is a tight-enough proxy) for an uploaded file
+ * (T-M6D-01). The parser's own `MAX_TOOLPATH_SEGMENTS` cap already bounds
+ * render geometry regardless of file size; this cap exists so a huge file
+ * fails fast with a visible status line instead of spending a long parse
+ * pass only to hit that later ceiling. */
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+
+/** Sentinel `selectedSampleId` value used while an uploaded job (rather than
+ * a bundled sample) is loaded — matches no entry in `GCODE_SAMPLES`, so
+ * `SampleSelect.tsx` can render it as a distinct, displayable-but-unselectable
+ * option instead of falling back to its "select a sample" placeholder. */
+export const UPLOADED_JOB_ID = '__uploaded__'
 
 interface CellState {
   /**
@@ -87,25 +112,26 @@ interface CellState {
   /** Set by RobotModel's loader success/failure callbacks. Transitions are
    * not one-way (e.g. a future reload could go ready -> loading -> error). */
   setRobotLoadStatus: (status: RobotLoadStatus) => void
-  /** The currently selected bundled sample's id (`GCODE_SAMPLES[].id`), or
-   * `null` before the user picks one. Read by `SampleSelect.tsx`'s
-   * controlled `<select>`. */
+  /** The currently selected bundled sample's id (`GCODE_SAMPLES[].id`), the
+   * `UPLOADED_JOB_ID` sentinel while an uploaded job is loaded, or `null`
+   * before anything has loaded. Read by `SampleSelect.tsx`'s controlled
+   * `<select>`. */
   selectedSampleId: string | null
-  /** The selected sample's fetch/parse status, read by the scene-status
+  /** The selected job's fetch/parse status, read by the scene-status
    * overlay pattern this store already follows for the robot load. */
   toolpathLoadStatus: ToolpathLoadStatus
   /** The parsed, classified, D-06-anchored toolpath — `null` until a
    * selection resolves successfully. `Toolpath.tsx` reads this to render. */
   toolpath: ParsedToolpath | null
-  /** The compiled IK trajectory for the currently selected sample — `null`
-   * until `selectSample` both parses AND compiles successfully. Compiled
-   * exactly once per sample selection (never on a scrub-drag event), inside
-   * the same stale-request guard `toolpath` itself is set under, so a
-   * superseded compile can never reach the store. */
+  /** The compiled IK trajectory for the currently selected job — `null`
+   * until a load both parses AND compiles successfully. Compiled exactly
+   * once per load (never on a scrub-drag event), inside the same
+   * stale-request guard `toolpath` itself is set under, so a superseded
+   * compile can never reach the store. */
   trajectory: CompiledTrajectory | null
   /** The rail position of the last successfully-compiled trajectory (04-REVIEW
    * CR-01). Defaults to `RAIL_CENTER_X` and is updated ONLY alongside
-   * `trajectory` in `selectSample`'s success branch — the null-out branches
+   * `trajectory` in the loader's success branch — the null-out branches
    * (unknown id, entering 'parsing', fetch/compile failure) deliberately
    * leave it untouched. `trajectory` itself goes `null` synchronously the
    * moment a new selection is dispatched, before the async fetch/parse/
@@ -118,12 +144,11 @@ interface CellState {
    * solve, never resets, so the fallback always reads the carriage's true
    * last on-screen position instead of an arbitrary constant. */
   lastRailPos: number
-  /** The `SelectSampleOrigin` of the most recently DISPATCHED `selectSample`
-   * call, written on every branch (unknown-id, parsing-entry, success,
-   * failure) alongside that branch's other fields — the same
-   * every-branch-writes-together convention `scrubFraction`/
-   * `livePlayback.fraction` already follow in this function. Read (never
-   * subscribed) by `ToolpathCameraFit.tsx` inside its own
+  /** The `SelectSampleOrigin` of the most recently DISPATCHED load, written
+   * on every branch (unknown-id, parsing-entry, success, failure) alongside
+   * that branch's other fields — the same every-branch-writes-together
+   * convention `scrubFraction`/`livePlayback.fraction` already follow.
+   * Read (never subscribed) by `ToolpathCameraFit.tsx` inside its own
    * `toolpathLoadStatus` effect, via `getState()`, exactly as that effect
    * already reads `toolpath.bounds` non-reactively. */
   lastSelectSampleOrigin: SelectSampleOrigin
@@ -152,23 +177,18 @@ interface CellState {
    * without ever calling `set()`. */
   livePlayback: { fraction: number }
   /**
-   * Resolves `sampleId` from `GCODE_SAMPLES`, fetches its bundled file, and
-   * parses it via `parseToolpath`. This is a once-per-selection write (the
-   * file's own top-of-file rule permits it) — nothing here is written from
-   * a render frame. Wrapped in try/catch so a parse/fetch failure lands on
-   * status 'error' instead of throwing into React. Immediately after
-   * `parseToolpath` succeeds (inside the same stale-request guard),
-   * compiles the trajectory via `compileTrajectory` and resets
-   * `scrubFraction` to zero for the new sample.
+   * Resolves `sampleId` from `GCODE_SAMPLES` and loads it via the shared
+   * `loadJobSource` loader. This is a once-per-selection write (the file's
+   * own top-of-file rule permits it) — nothing here is written from a
+   * render frame.
    *
    * `origin` defaults to `'manual'` — every pre-existing call site
-   * (`SampleSelect.tsx`'s dropdown `onChange`, and every test in this
-   * file written before G-04-1's checkpoint follow-up) keeps behaving
-   * exactly as before with no code change required. Only
-   * `useCellModeSampleSync.ts` passes `'mode-sync'` explicitly, tagging its
-   * automatic reselection so `ToolpathCameraFit.tsx` can defer to the wide
-   * Reset View framing instead of the tight D-05 auto-frame a human's own
-   * dropdown pick still gets.
+   * (`SampleSelect.tsx`'s dropdown `onChange`, and every test in this file
+   * written before G-04-1's checkpoint follow-up) keeps behaving exactly as
+   * before with no code change required. Only `useModeJobSync.ts` passes
+   * `'mode-sync'` explicitly, tagging its automatic reselection so
+   * `ToolpathCameraFit.tsx` can defer to the wide Reset View framing instead
+   * of the tight D-05 auto-frame a human's own dropdown pick still gets.
    */
   selectSample: (sampleId: string, origin?: SelectSampleOrigin) => Promise<void>
   /**
@@ -196,10 +216,26 @@ interface CellState {
    * trajectory. Only calls `set()` when it is not already null, so a
    * repeated call cannot churn subscribers. */
   clearManualJog: () => void
+  /** Per-mode uploaded job, `null` when that mode has no upload active
+   * (quick 260816-m6d). Keyed per `CellMode` so a file uploaded on one tab
+   * can never replace the other tab's job. */
+  uploadedJobs: Record<CellMode, { fileName: string; text: string } | null>
+  /** Rejects text over `MAX_UPLOAD_BYTES` by setting `toolpathLoadStatus:
+   * 'error'` and leaving the previous job's `uploadedJobs` entry untouched;
+   * otherwise records the entry and delegates to the shared loader with
+   * `selectedSampleId` set to `UPLOADED_JOB_ID`. */
+  loadUploadedGcode: (mode: CellMode, fileName: string, text: string) => Promise<void>
+  /** Drops `mode`'s uploaded job and reloads its bundled sample. */
+  clearUploadedJob: (mode: CellMode) => void
+  /** Dispatches `mode`'s uploaded job when it has one, otherwise the first
+   * bundled sample for `mode`. When a mode has neither (no bundled sample
+   * and no upload), sets an idle/empty state rather than dispatching an
+   * empty id. */
+  loadJobForMode: (mode: CellMode, origin?: SelectSampleOrigin) => Promise<void>
 }
 
 /**
- * Monotonically increasing token guarding `selectSample` against a stale
+ * Monotonically increasing token guarding the shared loader against a stale
  * in-flight response (T-02-10) — the same "incrementing counter, not a
  * boolean" idiom `resetToken` already establishes in this file. Module
  * scoped rather than a `CellState` field: it is internal bookkeeping for
@@ -208,65 +244,58 @@ interface CellState {
  */
 let selectSampleRequestId = 0
 
-export const useCellStore = create<CellState>((set, get) => ({
-  resetToken: 0,
-  requestCameraReset: () => set((state) => ({ resetToken: state.resetToken + 1 })),
-  robotLoadStatus: 'loading',
-  setRobotLoadStatus: (status) => set({ robotLoadStatus: status }),
-  selectedSampleId: null,
-  toolpathLoadStatus: 'idle',
-  toolpath: null,
-  trajectory: null,
-  lastRailPos: RAIL_CENTER_X,
-  lastSelectSampleOrigin: 'manual',
-  scrubFraction: 0,
-  setScrubFraction: (fraction) => {
-    const clamped = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0
-    // Keep the non-reactive channel in lockstep on every REACTIVE write
-    // (manual drag OR the clock's own throttled sync) so RobotPose.tsx/
-    // ScrubMarker.tsx never read a stale value between throttled syncs.
-    get().livePlayback.fraction = clamped
-    set({ scrubFraction: clamped })
-  },
-  isPlaying: false,
-  play: () => {
-    // Pressing Play means "run the toolpath" — it must take the robot back
-    // off manual command (quick 260816-m6d).
-    get().clearManualJog()
-    set({ isPlaying: true })
-  },
-  pause: () => set({ isPlaying: false }),
-  livePlayback: { fraction: 0 },
-  selectSample: async (sampleId, origin = 'manual') => {
+export const useCellStore = create<CellState>((set, get) => {
+  /**
+   * The shared job loader (quick 260816-m6d refactor of the original
+   * `selectSample` body): fetches/reads, parses, and compiles a job from
+   * either a bundled sample or an uploaded file. Preserves every behaviour
+   * the original single-purpose function established — the monotonic
+   * `selectSampleRequestId` stale-response guard, resolving the anchor
+   * BEFORE the first await, compiling inside the same guard before any
+   * further await, writing `lastRailPos` only on the success branch,
+   * resetting `scrubFraction`/`livePlayback.fraction`/`isPlaying`/
+   * `manualJog` on every branch, and recording `lastSelectSampleOrigin` on
+   * every branch. For an upload the only
+   * difference is where the g-code text comes from (the in-memory string
+   * instead of `fetch`) and that the anchor is resolved from the source's
+   * own `mode` rather than the live store read.
+   */
+  async function loadJobSource(source: JobSource, origin: SelectSampleOrigin): Promise<void> {
     selectSampleRequestId += 1
     const requestId = selectSampleRequestId
 
-    const sample = GCODE_SAMPLES.find((candidate) => candidate.id === sampleId)
-    if (!sample) {
-      // Reset both scrub channels here too (not just the success path below)
-      // so an unknown sampleId can't leave the marker/robot pose parked at a
-      // stale fraction left over from whatever was selected before.
-      get().livePlayback.fraction = 0
-      get().clearManualJog()
-      set({
-        selectedSampleId: sampleId,
-        toolpathLoadStatus: 'error',
-        toolpath: null,
-        trajectory: null,
-        isPlaying: false,
-        scrubFraction: 0,
-        lastSelectSampleOrigin: origin,
-      })
-      return
+    let sample: GcodeSample | undefined
+    if (source.kind === 'sample') {
+      sample = GCODE_SAMPLES.find((candidate) => candidate.id === source.sampleId)
+      if (!sample) {
+        // Reset both scrub channels here too (not just the success path
+        // below) so an unknown sampleId can't leave the marker/robot pose
+        // parked at a stale fraction left over from whatever was selected
+        // before.
+        get().livePlayback.fraction = 0
+        get().clearManualJog()
+        set({
+          selectedSampleId: source.sampleId,
+          toolpathLoadStatus: 'error',
+          toolpath: null,
+          trajectory: null,
+          isPlaying: false,
+          scrubFraction: 0,
+          lastSelectSampleOrigin: origin,
+        })
+        return
+      }
     }
 
-    // Same reset on entering 'parsing': the previous sample's trajectory is
+    const selectedSampleId = source.kind === 'upload' ? UPLOADED_JOB_ID : source.sampleId
+
+    // Same reset on entering 'parsing': the previous job's trajectory is
     // being torn down (toolpath/trajectory: null above), so its scrub
     // position must go with it rather than surviving into the new load.
     get().livePlayback.fraction = 0
     get().clearManualJog()
     set({
-      selectedSampleId: sampleId,
+      selectedSampleId,
       toolpathLoadStatus: 'parsing',
       toolpath: null,
       trajectory: null,
@@ -284,24 +313,36 @@ export const useCellStore = create<CellState>((set, get) => ({
     // already orchestrates fetch, parse and compile for a selection — is
     // where the cell's current configuration is resolved into a world-space
     // station. A mode change during an in-flight load dispatches its own
-    // selection through `useCellModeSampleSync`, and the request-id guard
-    // below already discards any selection this one supersedes.
-    const anchor = toolpathAnchorForMode(useUiShellStore.getState().cellMode)
+    // selection through `useModeJobSync`, and the request-id guard below
+    // already discards any selection this one supersedes. An upload instead
+    // resolves the anchor from the source's OWN mode, not the live store —
+    // it was uploaded for a specific tab and must anchor there even if the
+    // active tab has since changed.
+    const anchor =
+      source.kind === 'upload'
+        ? toolpathAnchorForMode(source.mode)
+        : toolpathAnchorForMode(useUiShellStore.getState().cellMode)
 
     try {
-      const response = await fetch(sample.filePath)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${sample.filePath}: ${response.status}`)
+      let gcodeText: string
+      if (source.kind === 'upload') {
+        gcodeText = source.text
+      } else {
+        const response = await fetch(sample!.filePath)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${sample!.filePath}: ${response.status}`)
+        }
+        gcodeText = await response.text()
       }
-      const gcodeText = await response.text()
+
       const toolpath = parseToolpath(gcodeText, anchor)
-      // Stale-response guard (T-02-10): if a newer selectSample call has
-      // started since this one began, this response is superseded — discard
-      // it rather than stamping a newer selection with an older result. A
-      // slow fetch resolving after a faster, later selection would
-      // otherwise leave the scene showing whichever fetch happened to
-      // resolve last, a last-write-wins race that only shows up on a slow
-      // connection — exactly when a live demo is running.
+      // Stale-response guard (T-02-10): if a newer load has started since
+      // this one began, this response is superseded — discard it rather
+      // than stamping a newer selection with an older result. A slow fetch
+      // resolving after a faster, later selection would otherwise leave the
+      // scene showing whichever fetch happened to resolve last, a
+      // last-write-wins race that only shows up on a slow connection —
+      // exactly when a live demo is running.
       if (requestId !== selectSampleRequestId) return
       // Trajectory compile runs here, still inside the stale-request guard
       // above and before any further await — so an older selection's
@@ -309,8 +350,8 @@ export const useCellStore = create<CellState>((set, get) => ({
       // the store (03-01-PLAN.md must_haves).
       const trajectory = compileTrajectory(toolpath)
       // isPlaying: false and livePlayback.fraction reset alongside
-      // scrubFraction so picking a new sample mid-run stops the clock
-      // instead of animating a stale position against a fresh trajectory.
+      // scrubFraction so picking a new job mid-run stops the clock instead
+      // of animating a stale position against a fresh trajectory.
       get().livePlayback.fraction = 0
       get().clearManualJog()
       set({
@@ -326,7 +367,7 @@ export const useCellStore = create<CellState>((set, get) => ({
         lastSelectSampleOrigin: origin,
       })
     } catch (err) {
-      console.error('Failed to load g-code sample:', err)
+      console.error('Failed to load g-code job:', err)
       // Same discard on the failure path: a slow failure must not stamp an
       // error status over a newer selection that already succeeded.
       if (requestId !== selectSampleRequestId) return
@@ -341,25 +382,99 @@ export const useCellStore = create<CellState>((set, get) => ({
         lastSelectSampleOrigin: origin,
       })
     }
-  },
-  manualJog: null,
-  setManualJointAngle: (jointIndex, radians) => {
-    const seed = get().manualJog ?? {
-      joints: UR3E_PARKED_POSE,
-      railPos: get().trajectory?.railPos ?? get().lastRailPos,
-    }
-    const nextJoints = [...seed.joints] as JointAngles
-    nextJoints[jointIndex] = clampJointAngle(jointIndex, radians)
-    set({ manualJog: { joints: nextJoints, railPos: seed.railPos } })
-  },
-  setManualRailPos: (metres) => {
-    const seed = get().manualJog ?? {
-      joints: UR3E_PARKED_POSE,
-      railPos: get().trajectory?.railPos ?? get().lastRailPos,
-    }
-    set({ manualJog: { joints: seed.joints, railPos: clampRailPosition(metres) } })
-  },
-  clearManualJog: () => {
-    if (get().manualJog !== null) set({ manualJog: null })
-  },
-}))
+  }
+
+  return {
+    resetToken: 0,
+    requestCameraReset: () => set((state) => ({ resetToken: state.resetToken + 1 })),
+    robotLoadStatus: 'loading',
+    setRobotLoadStatus: (status) => set({ robotLoadStatus: status }),
+    selectedSampleId: null,
+    toolpathLoadStatus: 'idle',
+    toolpath: null,
+    trajectory: null,
+    lastRailPos: RAIL_CENTER_X,
+    lastSelectSampleOrigin: 'manual',
+    scrubFraction: 0,
+    setScrubFraction: (fraction) => {
+      const clamped = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0
+      // Keep the non-reactive channel in lockstep on every REACTIVE write
+      // (manual drag OR the clock's own throttled sync) so RobotPose.tsx/
+      // ScrubMarker.tsx never read a stale value between throttled syncs.
+      get().livePlayback.fraction = clamped
+      set({ scrubFraction: clamped })
+    },
+    isPlaying: false,
+    play: () => {
+      // Pressing Play means "run the toolpath" — it must take the robot back
+      // off manual command (quick 260816-m6d).
+      get().clearManualJog()
+      set({ isPlaying: true })
+    },
+    pause: () => set({ isPlaying: false }),
+    livePlayback: { fraction: 0 },
+    selectSample: (sampleId, origin = 'manual') => loadJobSource({ kind: 'sample', sampleId }, origin),
+    manualJog: null,
+    setManualJointAngle: (jointIndex, radians) => {
+      const seed = get().manualJog ?? {
+        joints: UR3E_PARKED_POSE,
+        railPos: get().trajectory?.railPos ?? get().lastRailPos,
+      }
+      const nextJoints = [...seed.joints] as JointAngles
+      nextJoints[jointIndex] = clampJointAngle(jointIndex, radians)
+      set({ manualJog: { joints: nextJoints, railPos: seed.railPos } })
+    },
+    setManualRailPos: (metres) => {
+      const seed = get().manualJog ?? {
+        joints: UR3E_PARKED_POSE,
+        railPos: get().trajectory?.railPos ?? get().lastRailPos,
+      }
+      set({ manualJog: { joints: seed.joints, railPos: clampRailPosition(metres) } })
+    },
+    clearManualJog: () => {
+      if (get().manualJog !== null) set({ manualJog: null })
+    },
+    uploadedJobs: { printing: null, milling: null },
+    loadUploadedGcode: async (mode, fileName, text) => {
+      if (text.length > MAX_UPLOAD_BYTES) {
+        set({ toolpathLoadStatus: 'error' })
+        return
+      }
+      set((state) => ({
+        uploadedJobs: { ...state.uploadedJobs, [mode]: { fileName, text } },
+      }))
+      await loadJobSource({ kind: 'upload', mode, fileName, text }, 'manual')
+    },
+    clearUploadedJob: (mode) => {
+      set((state) => ({
+        uploadedJobs: { ...state.uploadedJobs, [mode]: null },
+      }))
+      void get().loadJobForMode(mode, 'manual')
+    },
+    loadJobForMode: async (mode, origin = 'manual') => {
+      const uploaded = get().uploadedJobs[mode]
+      if (uploaded) {
+        await loadJobSource({ kind: 'upload', mode, fileName: uploaded.fileName, text: uploaded.text }, origin)
+        return
+      }
+      const sampleId = firstSampleIdForMode(mode)
+      if (sampleId === null) {
+        // A mode with no bundled sample and no upload degrades to an idle,
+        // empty state rather than dispatching an empty id.
+        get().livePlayback.fraction = 0
+        get().clearManualJog()
+        set({
+          selectedSampleId: null,
+          toolpathLoadStatus: 'idle',
+          toolpath: null,
+          trajectory: null,
+          isPlaying: false,
+          scrubFraction: 0,
+          lastSelectSampleOrigin: origin,
+        })
+        return
+      }
+      await get().selectSample(sampleId, origin)
+    },
+  }
+})
