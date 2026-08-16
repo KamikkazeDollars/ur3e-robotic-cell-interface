@@ -7,10 +7,10 @@
  * only provable if the starting view and the reset target are literally
  * the same values (SCENE-02).
  *
- * The rail runs ~3m along X and the robot stands ~1.5m tall, so the camera
- * sits back and slightly elevated to hold the whole rig with comfortable
- * margin, looking at the origin — the point the cell (and the rail-rig
- * mount plan 01-04 inserts into) is centered on.
+ * The rail's visible track runs 2.8m along X and the robot stands ~1.5m
+ * tall, so the camera sits back and slightly elevated to hold the whole rig
+ * with comfortable margin, looking at the origin — the point the cell (and
+ * the rail-rig mount plan 01-04 inserts into) is centered on.
  */
 
 export const DEFAULT_CAMERA_POSITION = [3.5, 2.5, 4.5] as const

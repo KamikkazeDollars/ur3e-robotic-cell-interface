@@ -16,8 +16,7 @@ import { parseToolpath } from '../gcode/parseToolpath'
 import { toolpathAnchorForMode } from '../gcode/toolpath-anchor'
 import {
   RAIL_CENTER_X,
-  RAIL_TRAVEL,
-  RAIL_RESOLUTION_CANDIDATES,
+  RAIL_CANDIDATE_SPACING_M,
   MODE_RAIL_START_OFFSET_M,
 } from '../kinematics'
 import type { CellMode } from '../cell-mode'
@@ -26,7 +25,12 @@ function readSample(relativePath: string): string {
   return readFileSync(join(process.cwd(), relativePath), 'utf8')
 }
 
-const GRID_STEP = (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / (RAIL_RESOLUTION_CANDIDATES - 1)
+// Imported from the kinematics barrel rather than recomputed locally
+// (quick 260816-s4e, U-3: one derivation, not two) — this suite's `<=
+// GRID_STEP` tolerance stays as-is below: it compiles a REAL toolpath whose
+// worst-case-reach optimum need not coincide with a candidate, so a grid
+// step is the honest bound here.
+const GRID_STEP = RAIL_CANDIDATE_SPACING_M
 
 const SAMPLE_FILES = ['print-sample', 'mill-sample'] as const
 const MODES: readonly CellMode[] = ['printing', 'milling']
