@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-13)
 Phase: 5 — Telemetry / Dashboard
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-16 - Completed quick task 260816-m6d: Dashboard rework: manual joint/rail control, delete TCP section, prune non-functional tabs, per-tab gcode upload, hide scrub until play, bigger play button, remove Phase-X placeholder text
+Last activity: 2026-08-16 - Completed quick task 260816-srk: Correct enforced rail travel to +-1095mm (4th rail-overhang attempt, user-refined number)
 
 Progress: [██████████] 100%
 
@@ -115,6 +115,10 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260816-m6d | Dashboard rework: manual joint/rail control, delete TCP section, prune non-functional tabs, per-tab gcode upload, hide scrub until play, bigger play button, remove Phase-X placeholder text | 2026-08-16 | 51bc4a7 | [260816-m6d-dashboard-rework-manual-joint-rail-contr](./quick/260816-m6d-dashboard-rework-manual-joint-rail-contr/) |
+| 260816-nup | Manual-control safety: block singular/colliding poses with revert+error, enlarge rail model (1st attempt), revert Printing/Milling tabs to compact top toggle | 2026-08-16 | ea580da | [260816-nup-manual-control-safety-block-singular-col](./quick/260816-nup-manual-control-safety-block-singular-col/) |
+| 260816-qym | Fix off-by-one manual input bug (dual root cause), root-cause+fix rail rig overhang (2nd attempt, measured-footprint approach), add joint/rail sliders, add Home/Reset button | 2026-08-16 | d4e5574 | [260816-qym-fix-off-by-one-manual-input-bug-root-cau](./quick/260816-qym-fix-off-by-one-manual-input-bug-root-cau/) |
+| 260816-s4e | Cap RAIL_TRAVEL at ±1300mm, trim rail visual track to ±1400mm (3rd rail-overhang attempt, user-specified numbers), fix grid-alignment ripple effects | 2026-08-16 | 5fc78b9 | [260816-s4e-cap-rail-travel-at-1300mm-trim-rail-visu](./quick/260816-s4e-cap-rail-travel-at-1300mm-trim-rail-visu/) |
+| 260816-srk | Correct enforced rail travel to ±1095mm (4th rail-overhang attempt, user re-tested and refined the number against the trimmed track) | 2026-08-16 | (pending) | [260816-srk-correct-enforced-rail-travel-to-1095mm-w](./quick/260816-srk-correct-enforced-rail-travel-to-1095mm-w/) |
 
 ## Deferred Items
 
