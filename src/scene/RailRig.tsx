@@ -10,8 +10,9 @@ import { SCENE_PALETTE } from './scene-palette'
 // RAIL_CENTER_X) — those are always read from the kinematics barrel so the
 // rendered rail and Phase 5's telemetry readout can never drift apart.
 //
-// U-2: RAIL_PROFILE_WIDTH, RAIL_PROFILE_HEIGHT, RAIL_GAP, TRACK_OVERHANG,
-// END_STOP_WIDTH, END_STOP_HEIGHT, END_STOP_DEPTH, and CARRIAGE_BASE_WIDTH
+// U-2: RAIL_PROFILE_WIDTH, RAIL_PROFILE_HEIGHT, RAIL_GAP,
+// TRACK_RUNOUT_PAST_CARRIAGE_M, END_STOP_WIDTH, END_STOP_HEIGHT,
+// END_STOP_DEPTH, END_STOP_CENTER_X_MIN/MAX, and CARRIAGE_BASE_WIDTH
 // are exported so `src/collision/pose-collision.ts` can derive the rig's
 // collision envelope instead of restating these numbers — one geometry
 // source feeds both the rendered mesh and the pose-collision AABBs.
@@ -39,44 +40,65 @@ const CARRIAGE_BLOCK_WIDTH = 0.22
 export const CARRIAGE_BLOCK_DEPTH = 0.22
 const CARRIAGE_BLOCK_HEIGHT = 0.1
 
-// U-2 (quick 260816-s4e): the two previous fix attempts for this defect
-// (quick 260816-nup's cosmetic margin, quick 260816-qym's measured-footprint
-// derivation) were both confirmed by the user, via live testing, NOT to have
-// fixed it. The user has now determined the correct visible-track figure
-// empirically and supplied it directly. `TRACK_HALF_SPAN_M` below is that
-// fixed figure — it is NOT derived from the robot's rendered extent, and
-// must not be re-derived from one: both prior geometry-based approaches were
-// rejected.
-/** Half the rail track's fixed rendered span (metres) — a figure specified
- * directly by the user from live testing of the rendered rig (quick
- * 260816-s4e), chosen so a modest, deliberate amount of visible track
- * remains past each end-stop and no more. */
-export const TRACK_HALF_SPAN_M = 1.4
-/** Visible track remaining beyond each end-stop block — a CONSEQUENCE of the
- * fixed span above minus half the (now enforced) travel span, not an input
- * to it. */
-export const TRACK_OVERHANG = TRACK_HALF_SPAN_M - (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / 2
-
 // Discrete end-stop blocks (short and wide, not tall thin fins) spanning
-// across both rails at each physical travel limit.
+// across both rails at each physical travel limit. Declared here, above the
+// track-span derivation block below, because that block now derives FROM
+// these dimensions — a `const` declared after its first use throws on the
+// temporal dead zone at module evaluation.
 export const END_STOP_WIDTH = 0.07 // thin along the travel (X) axis
 export const END_STOP_HEIGHT = 0.12 // short block, sits just above rail height
 export const END_STOP_DEPTH = RAIL_GAP + RAIL_PROFILE_WIDTH * 2 + 0.02 // spans both rails plus a small lip
 
+// U-2 / quick 260817-03q (fifth round — root cause fix): the end-stop was
+// previously rendered at the travel bound itself, which is the CARRIAGE'S
+// CENTRE position at that limit — so the end-stop sat 100% swallowed inside
+// the carriage's own body instead of standing proud in front of it. The
+// derivation below places each end-stop where the carriage's FACE actually
+// stops, and derives the visible track span from that placement, so a fixed
+// span literal (rejected by this round's investigation — see the plan's
+// root-cause section) can never again be wrong for whatever RAIL_TRAVEL is.
+
+/** Visible track that keeps running past each end-stop's outer face —
+ * derived from the carriage's own width rather than an independently chosen
+ * literal, because the run-out only reads as "track" if it is at least as
+ * long as the thing sitting on it. */
+export const TRACK_RUNOUT_M = CARRIAGE_BASE_WIDTH
+
+/** World-space X of the end-stop block nearest RAIL_TRAVEL.max — the
+ * carriage's outer face at the max travel extreme, plus half the end-stop's
+ * own width, so the stop's INNER face is flush with the carriage's outer
+ * face and the stop's body stands entirely outside the carriage. */
+export const END_STOP_CENTER_X_MAX = RAIL_TRAVEL.max + CARRIAGE_BASE_WIDTH / 2 + END_STOP_WIDTH / 2
+
+/** Mirrored derivation for the min-side end-stop — derived independently
+ * from RAIL_TRAVEL.min (not by negating the max-side value) so an
+ * asymmetric travel range would still be handled correctly. */
+export const END_STOP_CENTER_X_MIN = RAIL_TRAVEL.min - CARRIAGE_BASE_WIDTH / 2 - END_STOP_WIDTH / 2
+
+/** Half the rail track's rendered span (metres) — DERIVED from the end-stop
+ * placement above, not an independently chosen literal: it is the distance
+ * from RAIL_CENTER_X out to the max-side end-stop's own outer face, plus
+ * TRACK_RUNOUT_M of track still visible beyond it. A fixed literal cannot be
+ * correct for any travel range by construction (this round's confirmed root
+ * cause of the recurring defect), so this value re-scales automatically with
+ * RAIL_TRAVEL and the end-stop/carriage dimensions. */
+export const TRACK_HALF_SPAN_M =
+  END_STOP_CENTER_X_MAX - RAIL_CENTER_X + END_STOP_WIDTH / 2 + TRACK_RUNOUT_M
+
 /** Overall rail run length, exported for CellScene's footprint-sized floor
  * (checkpoint follow-up, item 3) — the floor must never restate this span.
- * Equal to `TRACK_HALF_SPAN_M * 2` — the fixed span, ends at
- * `RAIL_CENTER_X ± TRACK_HALF_SPAN_M`. */
+ * Equal to `TRACK_HALF_SPAN_M * 2` — ends at `RAIL_CENTER_X ± TRACK_HALF_SPAN_M`. */
 export const TRACK_LENGTH = TRACK_HALF_SPAN_M * 2
 
-// At a travel extreme (RAIL_TRAVEL.min/.max) the carriage's own base plate
-// (CARRIAGE_BASE_WIDTH, above) now sits fully within the visible track:
-// half the plate's width is smaller than TRACK_OVERHANG's remaining visible
-// track, so no part of the plate overhangs the track end. This is a direct
-// consequence of the corrected, narrower enforced travel (quick 260816-srk)
-// — TRACK_HALF_SPAN_M / TRACK_LENGTH above remain the fixed, user-specified
-// visible-track figure (quick 260816-s4e) and were deliberately not
-// re-derived here.
+/** Visible track remaining beyond each end-stop's OUTER face (the carriage's
+ * own face, not the stop's) — the quantity that matters perceptually, and
+ * the one the retired `TRACK_OVERHANG` name silently measured wrong (from
+ * the carriage's centre instead of its face). Renamed rather than redefined
+ * in place so `tsc` surfaces every consumer instead of letting the changed
+ * meaning propagate silently — the exact drift class this file has already
+ * been bitten by twice. */
+export const TRACK_RUNOUT_PAST_CARRIAGE_M =
+  TRACK_HALF_SPAN_M - (RAIL_TRAVEL.max + CARRIAGE_BASE_WIDTH / 2)
 
 /** UR3e reach envelope (~500mm per official specs, approximate). Used only
  * for scene-composition floor sizing — not a kinematic constraint, and
@@ -180,12 +202,17 @@ export default function RailRig({ railPos }: { railPos: number }) {
       ))}
 
       {/* End-stop blocks at both physical travel limits (D-07) — the visual
-          anchor Phase 5's remaining-travel readout will be read against. */}
-      <mesh position={[RAIL_TRAVEL.min, END_STOP_CENTER_Y, 0]} castShadow>
+          anchor Phase 5's remaining-travel readout will be read against.
+          Positioned at END_STOP_CENTER_X_MIN/MAX (the carriage's outer FACE
+          at each travel extreme), not RAIL_TRAVEL.min/.max (the carriage's
+          CENTRE) — the hard-stop semantics modelled here: the travel limit
+          is where the carriage's face meets the stop's face, so the stop
+          always stands outside the carriage and stays visible at the limit. */}
+      <mesh position={[END_STOP_CENTER_X_MIN, END_STOP_CENTER_Y, 0]} castShadow>
         <boxGeometry args={[END_STOP_WIDTH, END_STOP_HEIGHT, END_STOP_DEPTH]} />
         <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
       </mesh>
-      <mesh position={[RAIL_TRAVEL.max, END_STOP_CENTER_Y, 0]} castShadow>
+      <mesh position={[END_STOP_CENTER_X_MAX, END_STOP_CENTER_Y, 0]} castShadow>
         <boxGeometry args={[END_STOP_WIDTH, END_STOP_HEIGHT, END_STOP_DEPTH]} />
         <meshStandardMaterial color={SCENE_PALETTE.rail.hex} />
       </mesh>

@@ -15,9 +15,9 @@ import { ROBOT_MOUNT_WORLD } from '../gcode/toolpath-anchor';
 const TOTAL_TRAVEL = RAIL_TRAVEL.max - RAIL_TRAVEL.min;
 
 describe('rail travel geometry', () => {
-  it('exposes a min/max range with max strictly greater than min, totaling 2.19 metres', () => {
+  it('exposes a min/max range with max strictly greater than min, totaling 2.6 metres', () => {
     expect(RAIL_TRAVEL.max).toBeGreaterThan(RAIL_TRAVEL.min);
-    expect(TOTAL_TRAVEL).toBeCloseTo(2.19, 5);
+    expect(TOTAL_TRAVEL).toBeCloseTo(2.6, 5);
   });
 
   it('centres RAIL_CENTER_X at the midpoint of the travel range', () => {

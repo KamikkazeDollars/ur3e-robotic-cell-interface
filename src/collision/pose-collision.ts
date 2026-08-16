@@ -11,7 +11,7 @@
 // retyped scene literal — so a real geometry change can never silently
 // desync from the collision envelope.
 import { dhFrameToScene } from '../trajectory/compile'
-import { forwardKinematics, RAIL_CENTER_X, RAIL_TRAVEL, type JointAngles } from '../kinematics'
+import { forwardKinematics, RAIL_CENTER_X, type JointAngles } from '../kinematics'
 import {
   ROBOT_MOUNT_WORLD,
   WORKBENCH_TOP_Y,
@@ -28,6 +28,8 @@ import {
   END_STOP_WIDTH,
   END_STOP_HEIGHT,
   END_STOP_DEPTH,
+  END_STOP_CENTER_X_MIN,
+  END_STOP_CENTER_X_MAX,
   CARRIAGE_BASE_WIDTH,
   CARRIAGE_BASE_DEPTH,
   CARRIAGE_TOP_Y,
@@ -130,8 +132,17 @@ export function classifyPoseCollision(
   const trackZMin = RIG_Z_OFFSET - (RAIL_GAP / 2 + RAIL_PROFILE_WIDTH / 2)
   const trackZMax = RIG_Z_OFFSET + (RAIL_GAP / 2 + RAIL_PROFILE_WIDTH / 2)
 
-  // Two end-stop blocks, at each physical travel limit.
-  const endStops = [RAIL_TRAVEL.min, RAIL_TRAVEL.max].map((x) => ({
+  // Two end-stop blocks, at each physical travel limit — built from
+  // END_STOP_CENTER_X_MIN/MAX, the same exported constants RailRig.tsx uses
+  // to position the rendered end-stop meshes, so the collider can never
+  // diverge from what is actually drawn (quick 260817-03q). These stand
+  // outboard of the carriage's face at each travel extreme, not at
+  // RAIL_TRAVEL.min/.max (the carriage's centre) — a behavioural
+  // improvement over the previous version: the stops used to sit directly
+  // under the robot's own base at the travel extremes, a false-positive
+  // source for arm keypoints near the mount; they now sit
+  // CARRIAGE_BASE_WIDTH / 2 + END_STOP_WIDTH / 2 (0.17m) outboard of it.
+  const endStops = [END_STOP_CENTER_X_MIN, END_STOP_CENTER_X_MAX].map((x) => ({
     xMin: x - END_STOP_WIDTH / 2,
     xMax: x + END_STOP_WIDTH / 2,
     yMax: RAIL_PROFILE_HEIGHT + END_STOP_HEIGHT,
