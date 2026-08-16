@@ -1,10 +1,11 @@
 // 7th-axis rail travel geometry.
 //
-// Provenance note (RESEARCH.md Assumption A4 / Open Question #1): no rail
-// product spec was named anywhere in the source artifacts — CONTEXT.md
-// leaves the exact travel range to implementation discretion. The 3-metre
-// total travel below is a deliberately-chosen, plausible round number, NOT
-// a sourced hardware spec. Do not mistake this for a datasheet value.
+// Provenance note (quick 260816-s4e): this is no longer a deliberately-
+// chosen plausible round number. It is the range the user established
+// empirically through live testing of the rendered rig — beyond it, the
+// robot renders in a visually broken state (`Robot Problem.png`, third
+// report of the same defect). It is still NOT a sourced hardware datasheet
+// value; do not mistake it for one.
 //
 // This module is the single source of truth for the rail's travel range,
 // centre position, clamping, and remaining-travel calculation: the 3D rail
@@ -13,8 +14,8 @@
 // where the limits are.
 import type { CellMode } from '../cell-mode'
 
-/** Rail travel range in metres, robot centred (3 m total travel). */
-export const RAIL_TRAVEL = { min: -1.5, max: 1.5 } as const;
+/** Rail travel range in metres, robot centred (2.6 m total travel). */
+export const RAIL_TRAVEL = { min: -1.3, max: 1.3 } as const;
 
 /** Centre of the travel range — computed from RAIL_TRAVEL, not restated. */
 export const RAIL_CENTER_X = (RAIL_TRAVEL.min + RAIL_TRAVEL.max) / 2;
@@ -38,6 +39,16 @@ export function railRemainingTravel(x: number): { negative: number; positive: nu
  * endpoints.
  */
 export const RAIL_RESOLUTION_CANDIDATES = 201;
+
+/**
+ * Spacing (metres) between consecutive `resolveRailPosition` candidates —
+ * the single derivation of that spacing. No consumer may restate this as a
+ * literal (quick 260816-s4e, U-3): `MODE_RAIL_START_OFFSET_M` below derives
+ * from it directly, and `src/trajectory/mode-rail.test.ts` imports it rather
+ * than recomputing its own copy.
+ */
+export const RAIL_CANDIDATE_SPACING_M =
+  (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / (RAIL_RESOLUTION_CANDIDATES - 1);
 
 /**
  * D-02's 7th-axis redundancy resolution: picks the single rail position
@@ -73,22 +84,30 @@ export const RAIL_RESOLUTION_CANDIDATES = 201;
  * hardware spec — CONTEXT.md leaves the rail's dimensions to implementation
  * discretion, and the UAT report that raised G-04-1 explicitly left the
  * distance to the implementer's judgement.
- * (b) 0.6m is 40% of the rail's half-travel (1.5m), so both mode stations
- * stay well inside the end-stops with usable travel remaining on both
- * sides — asserted in `rail.test.ts`.
- * (c) It is an exact multiple of `resolveRailPosition`'s own candidate
- * spacing (`(RAIL_TRAVEL.max - RAIL_TRAVEL.min) / (RAIL_RESOLUTION_CANDIDATES
- * - 1)` = 0.015m): 0.6 / 0.015 = 40 exactly. This is what makes the resolved
- * station for an off-centre-anchored toolpath land on exactly the centred
- * result plus the offset, rather than drifting by up to half a grid step.
+ * (b) Expressed as a whole number of `resolveRailPosition` candidate steps
+ * (`MODE_RAIL_START_OFFSET_STEPS`) rather than restated as an independent
+ * metres literal (quick 260816-s4e, U-3 fix): the station now sits at
+ * roughly 46% of the 1.3m half-travel, leaving 0.702m of travel beyond it
+ * on the tight side, so both stations stay well inside the end-stops with
+ * usable travel remaining on both sides — asserted in `rail.test.ts`.
+ * (c) Because the offset is DERIVED from `RAIL_CANDIDATE_SPACING_M`
+ * (46 steps x that spacing) rather than restated as an independently-chosen
+ * literal, exact grid alignment is now structural, not a coincidence of two
+ * independently-chosen numbers — it cannot silently regress under any
+ * future travel-span change. This matters because it is what makes the
+ * resolved station for an off-centre-anchored toolpath land EXACTLY on the
+ * centred result plus the offset, rather than drifting by up to half a grid
+ * step.
  */
-export const MODE_RAIL_START_OFFSET_M = 0.6
+const MODE_RAIL_START_OFFSET_STEPS = 46
+export const MODE_RAIL_START_OFFSET_M = MODE_RAIL_START_OFFSET_STEPS * RAIL_CANDIDATE_SPACING_M
 
 /**
  * The per-mode rail station a toolpath (and the workbench it rests on) is
- * anchored to — G-04-1 gap closure. Printing parks 0.6m right of centre,
- * milling 0.6m left, giving the 7th axis a visible reason to move between
- * modes instead of always resolving back to `RAIL_CENTER_X` (which happens
+ * anchored to — G-04-1 gap closure. Printing parks `MODE_RAIL_START_OFFSET_M`
+ * right of centre, milling the same distance left, giving the 7th axis a
+ * visible reason to move between modes instead of always resolving back to
+ * `RAIL_CENTER_X` (which happens
  * whenever the anchored work is itself centred — see `resolveRailPosition`'s
  * own doc comment and PITFALLS.md Pitfall 5).
  *

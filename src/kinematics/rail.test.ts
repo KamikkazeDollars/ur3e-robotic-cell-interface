@@ -6,6 +6,7 @@ import {
   clampRailPosition,
   resolveRailPosition,
   RAIL_RESOLUTION_CANDIDATES,
+  RAIL_CANDIDATE_SPACING_M,
   MODE_RAIL_START_OFFSET_M,
   railStartXForMode,
 } from './rail';
@@ -14,9 +15,9 @@ import { ROBOT_MOUNT_WORLD } from '../gcode/toolpath-anchor';
 const TOTAL_TRAVEL = RAIL_TRAVEL.max - RAIL_TRAVEL.min;
 
 describe('rail travel geometry', () => {
-  it('exposes a min/max range with max strictly greater than min, totaling 3 metres', () => {
+  it('exposes a min/max range with max strictly greater than min, totaling 2.6 metres', () => {
     expect(RAIL_TRAVEL.max).toBeGreaterThan(RAIL_TRAVEL.min);
-    expect(TOTAL_TRAVEL).toBeCloseTo(3, 5);
+    expect(TOTAL_TRAVEL).toBeCloseTo(2.6, 5);
   });
 
   it('centres RAIL_CENTER_X at the midpoint of the travel range', () => {
@@ -45,6 +46,20 @@ describe('rail travel geometry', () => {
     const atMax = railRemainingTravel(RAIL_TRAVEL.max);
     expect(atMax.negative).toBeCloseTo(TOTAL_TRAVEL, 5);
     expect(atMax.positive).toBeCloseTo(0, 5);
+  });
+});
+
+describe('grid-alignment invariant (quick 260816-s4e, U-3): holds by construction, not coincidence', () => {
+  it('RAIL_CANDIDATE_SPACING_M equals the travel span divided by RAIL_RESOLUTION_CANDIDATES - 1', () => {
+    expect(RAIL_CANDIDATE_SPACING_M).toBeCloseTo(
+      TOTAL_TRAVEL / (RAIL_RESOLUTION_CANDIDATES - 1),
+      12,
+    );
+  });
+
+  it('MODE_RAIL_START_OFFSET_M is an exact whole multiple of RAIL_CANDIDATE_SPACING_M, to within 1e-9', () => {
+    const ratio = MODE_RAIL_START_OFFSET_M / RAIL_CANDIDATE_SPACING_M;
+    expect(Math.abs(ratio - Math.round(ratio))).toBeLessThan(1e-9);
   });
 });
 
@@ -141,7 +156,7 @@ describe('railStartXForMode (G-04-1 gap closure)', () => {
     }
   });
 
-  it('resolveRailPosition is translation-covariant under the mode offset, within one candidate grid step — the property that lets the anchor, rather than the resolver, carry the mode', () => {
+  it('resolveRailPosition is translation-covariant under the mode offset, EXACTLY (to within 1e-9, not merely within one grid step) — the property that lets the anchor, rather than the resolver, carry the mode', () => {
     const mount = ROBOT_MOUNT_WORLD;
     // Same symmetric point cloud as the "resolves at RAIL_CENTER_X" test
     // above, so the baseline resolves exactly to RAIL_CENTER_X.
@@ -151,13 +166,15 @@ describe('railStartXForMode (G-04-1 gap closure)', () => {
       [mount.x - 0.03, mount.y + 0.02, mount.z + 0.35],
       [mount.x + 0.03, mount.y + 0.02, mount.z + 0.35],
     ];
-    const gridStep = (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / (RAIL_RESOLUTION_CANDIDATES - 1);
     const baseline = resolveRailPosition(points, mount);
 
     for (const offset of [MODE_RAIL_START_OFFSET_M, -MODE_RAIL_START_OFFSET_M]) {
       const translated = points.map(([x, y, z]) => [x + offset, y, z] as [number, number, number]);
       const resolved = resolveRailPosition(translated, mount);
-      expect(Math.abs(resolved - (baseline + offset))).toBeLessThanOrEqual(gridStep);
+      // If this fails, fix the offset derivation (RAIL_CANDIDATE_SPACING_M /
+      // MODE_RAIL_START_OFFSET_STEPS) — do NOT widen this tolerance back
+      // toward a grid step.
+      expect(Math.abs(resolved - (baseline + offset))).toBeLessThan(1e-9);
     }
   });
 });
