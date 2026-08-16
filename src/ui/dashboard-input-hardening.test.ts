@@ -67,3 +67,32 @@ describe('DashboardPanel.tsx — input hardening structural guards (quick 260816
     }
   })
 })
+
+describe('DashboardPanel.tsx — sliders (quick 260816-qym, Task 5)', () => {
+  it('renders a range input for the manual-jog axes', () => {
+    const source = readSource()
+    expect(source).toMatch(/type="range"/)
+  })
+
+  it("every range input's change handler routes to the SAME onCommit the typed field's commit path uses — no second write path into manualJog", () => {
+    const source = readSource()
+    // The literal onChange body wired to the slider — proves it dispatches
+    // the identical `onCommit` prop `commitNumberFieldDraft` also receives
+    // in this same component, rather than a second, independent handler.
+    expect(source).toMatch(/onChange=\{\(event\) => onCommit\(Number\(event\.target\.value\)\)\}/)
+  })
+
+  it('re-asserts (now covering the sliders too) that the file dispatches no manual-pose store action other than the four allowed names', () => {
+    const source = readSource()
+    const allowed = new Set(['setManualJointAngle', 'setManualRailPos', 'clearManualJog', 'homeManualPose'])
+    const callRe = /\b(set\w*Manual\w*|clear\w*Manual\w*|home\w*Manual\w*)\s*\(/g
+    const found = new Set<string>()
+    let m: RegExpExecArray | null
+    while ((m = callRe.exec(source)) !== null) {
+      found.add(m[1])
+    }
+    for (const name of found) {
+      expect(allowed.has(name)).toBe(true)
+    }
+  })
+})
