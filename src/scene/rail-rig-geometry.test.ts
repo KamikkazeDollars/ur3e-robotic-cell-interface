@@ -1,51 +1,47 @@
-// U-4 / quick 260816-qym U-2: mechanical proof that the rail track's
-// visible length genuinely carries the carriage AND the robot standing on
-// it at both travel extremes, not just a prose claim. Reads the real scene
-// module (same import-a-tsx-module-under-node-env pattern
+// U-4 / quick 260816-s4e U-2: mechanical proof that the rail track's
+// visible length is exactly the fixed, user-specified span — not a
+// measurement of anything about the robot's rendered footprint. Reads the
+// real scene module (same import-a-tsx-module-under-node-env pattern
 // `src/gcode/toolpath-anchor.test.ts` already relies on — this repo's
 // Vitest runs `environment: 'node'`, so a plain module import is enough;
 // nothing here needs jsdom/canvas).
 import { describe, it, expect } from 'vitest'
-import { RAIL_TRAVEL } from '../kinematics'
-import { TRACK_LENGTH, TRACK_END_MARGIN, TRACK_OVERHANG, CARRIAGE_BASE_WIDTH, RIG_FOOTPRINT_WIDTH } from './RailRig'
-import { ROBOT_FOOTPRINT_HALF_WIDTH_X } from './robot-footprint'
+import { RAIL_TRAVEL, RAIL_CENTER_X } from '../kinematics'
+import {
+  TRACK_HALF_SPAN_M,
+  TRACK_LENGTH,
+  TRACK_OVERHANG,
+  RIG_FOOTPRINT_WIDTH,
+  ROBOT_REACH_ENVELOPE,
+} from './RailRig'
 
-describe('U-4: rail track length carries the carriage at both travel extremes', () => {
-  it('RAIL_TRAVEL is unchanged — the logical ±1.5m travel range did not move', () => {
-    expect(RAIL_TRAVEL.min).toBe(-1.5)
-    expect(RAIL_TRAVEL.max).toBe(1.5)
+describe('U-4: rail track is a fixed, user-specified span (quick 260816-s4e)', () => {
+  it('RAIL_TRAVEL is capped at the new empirically-determined ±1.3m range', () => {
+    expect(RAIL_TRAVEL.min).toBe(-1.3)
+    expect(RAIL_TRAVEL.max).toBe(1.3)
   })
 
-  // Quick 260816-qym (U-2): the two assertions below replace the previous
-  // carriage-derived ones (`CARRIAGE_BASE_WIDTH / 2 + TRACK_END_MARGIN`),
-  // which described the mounting PLATE's own half-width, not the robot's
-  // real reach — the root cause of the still-reported overhang defect after
-  // the first fix attempt. `TRACK_OVERHANG` now derives from the robot's
-  // measured worst-case footprint (`ROBOT_FOOTPRINT_HALF_WIDTH_X`,
-  // `./robot-footprint.ts`) instead.
-
-  it('at the travel extreme, the track extends at least ROBOT_FOOTPRINT_HALF_WIDTH_X + TRACK_END_MARGIN past the limit — the robot itself, not just the carriage plate, stays over the track', () => {
-    expect(TRACK_LENGTH / 2 - RAIL_TRAVEL.max).toBeGreaterThanOrEqual(
-      ROBOT_FOOTPRINT_HALF_WIDTH_X + TRACK_END_MARGIN,
-    )
+  it('TRACK_LENGTH is exactly 2.8 to 10 decimal places', () => {
+    expect(TRACK_LENGTH).toBeCloseTo(2.8, 10)
   })
 
-  it('TRACK_OVERHANG is strictly greater than the superseded carriage-derived figure (CARRIAGE_BASE_WIDTH/2 + 0.3) — this specific regression cannot come back', () => {
-    const supersededOverhang = CARRIAGE_BASE_WIDTH / 2 + 0.3
-    expect(TRACK_OVERHANG).toBeGreaterThan(supersededOverhang)
+  it('the track ends at RAIL_CENTER_X ± TRACK_HALF_SPAN_M, matching RAIL_CENTER_X ∓ 1.4 to 10 decimal places', () => {
+    const low = RAIL_CENTER_X - TRACK_HALF_SPAN_M
+    const high = RAIL_CENTER_X + TRACK_HALF_SPAN_M
+    expect(low).toBeCloseTo(RAIL_CENTER_X - 1.4, 10)
+    expect(high).toBeCloseTo(RAIL_CENTER_X + 1.4, 10)
   })
 
-  it('TRACK_END_MARGIN sits on top of the measured footprint rather than standing alone', () => {
-    expect(TRACK_OVERHANG - TRACK_END_MARGIN).toBeCloseTo(ROBOT_FOOTPRINT_HALF_WIDTH_X, 10)
-  })
-
-  it('TRACK_LENGTH is strictly longer than the "carriage only just fits" case that produced the reported defect', () => {
-    expect(TRACK_LENGTH).toBeGreaterThan(
-      RAIL_TRAVEL.max - RAIL_TRAVEL.min + 2 * (CARRIAGE_BASE_WIDTH / 2),
-    )
+  it('TRACK_OVERHANG is 0.1 to 10 decimal places and equals TRACK_HALF_SPAN_M minus half the travel span', () => {
+    expect(TRACK_OVERHANG).toBeCloseTo(0.1, 10)
+    expect(TRACK_OVERHANG).toBeCloseTo(TRACK_HALF_SPAN_M - (RAIL_TRAVEL.max - RAIL_TRAVEL.min) / 2, 10)
   })
 
   it('the floor footprint still fully contains the track', () => {
     expect(RIG_FOOTPRINT_WIDTH).toBeGreaterThan(TRACK_LENGTH)
+  })
+
+  it('the floor half-width is at least RAIL_TRAVEL.max + ROBOT_REACH_ENVELOPE — shrinking the track can never leave the robot standing off the floor plane', () => {
+    expect(RIG_FOOTPRINT_WIDTH / 2).toBeGreaterThanOrEqual(RAIL_TRAVEL.max + ROBOT_REACH_ENVELOPE)
   })
 })
