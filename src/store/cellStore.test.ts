@@ -105,7 +105,12 @@ describe('useCellStore — setScrubFraction', () => {
 
 describe('useCellStore — playback', () => {
   beforeEach(() => {
-    useCellStore.setState({ isPlaying: false, scrubFraction: 0, livePlayback: { fraction: 0 } })
+    useCellStore.setState({
+      isPlaying: false,
+      playbackStarted: false,
+      scrubFraction: 0,
+      livePlayback: { fraction: 0 },
+    })
   })
 
   it('isPlaying starts false', () => {
@@ -117,6 +122,39 @@ describe('useCellStore — playback', () => {
     expect(useCellStore.getState().isPlaying).toBe(true)
     useCellStore.getState().pause()
     expect(useCellStore.getState().isPlaying).toBe(false)
+  })
+
+  it('playbackStarted starts false', () => {
+    expect(useCellStore.getState().playbackStarted).toBe(false)
+  })
+
+  it('play() sets playbackStarted true', () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+  })
+
+  it('pause() leaves playbackStarted true (the timeline stays visible once unlocked)', () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+    useCellStore.getState().pause()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+  })
+
+  it('loading a job returns playbackStarted to false', async () => {
+    useCellStore.getState().play()
+    expect(useCellStore.getState().playbackStarted).toBe(true)
+
+    const printGcode = 'G1 X10 Y0 Z0 F100\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(printGcode) } as Response),
+      ),
+    )
+    await useCellStore.getState().selectSample('print')
+
+    expect(useCellStore.getState().playbackStarted).toBe(false)
+    vi.unstubAllGlobals()
   })
 
   it('livePlayback.fraction starts at 0', () => {

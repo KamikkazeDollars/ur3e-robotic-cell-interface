@@ -171,6 +171,16 @@ interface CellState {
   /** Dispatched by `PlaybackControl.tsx`'s Pause button, and by
    * `usePlaybackClock.ts` itself when the run reaches the end (D-06). */
   pause: () => void
+  /** True once `play()` has been dispatched at least once for the CURRENT
+   * job (quick 260816-m6d). `App.tsx` gates `ScrubControl`'s mount on this,
+   * so the timeline stays hidden until the user presses Play, then stays
+   * visible/draggable for the rest of that job's session. Reset to `false`
+   * on every branch of the shared job loader that already resets
+   * `scrubFraction` — loading a new job hides the bar again and the
+   * "press Play to unlock the timeline" affordance repeats per job.
+   * Deliberately NOT reset by `pause()` — the whole point is that the bar
+   * stays draggable once playback has begun. */
+  playbackStarted: boolean
   /** The non-reactive 60fps position channel — see file-header comment.
    * A referentially STABLE object, created once in the initial state and
    * NEVER replaced; `usePlaybackClock.ts` mutates `.fraction` directly,
@@ -254,8 +264,8 @@ export const useCellStore = create<CellState>((set, get) => {
    * BEFORE the first await, compiling inside the same guard before any
    * further await, writing `lastRailPos` only on the success branch,
    * resetting `scrubFraction`/`livePlayback.fraction`/`isPlaying`/
-   * `manualJog` on every branch, and recording `lastSelectSampleOrigin` on
-   * every branch. For an upload the only
+   * `playbackStarted`/`manualJog` on every branch, and recording
+   * `lastSelectSampleOrigin` on every branch. For an upload the only
    * difference is where the g-code text comes from (the in-memory string
    * instead of `fetch`) and that the anchor is resolved from the source's
    * own `mode` rather than the live store read.
@@ -280,6 +290,7 @@ export const useCellStore = create<CellState>((set, get) => {
           toolpath: null,
           trajectory: null,
           isPlaying: false,
+          playbackStarted: false,
           scrubFraction: 0,
           lastSelectSampleOrigin: origin,
         })
@@ -300,6 +311,7 @@ export const useCellStore = create<CellState>((set, get) => {
       toolpath: null,
       trajectory: null,
       isPlaying: false,
+      playbackStarted: false,
       scrubFraction: 0,
       lastSelectSampleOrigin: origin,
     })
@@ -349,9 +361,11 @@ export const useCellStore = create<CellState>((set, get) => {
       // compile can never land after a newer selection has already reset
       // the store (03-01-PLAN.md must_haves).
       const trajectory = compileTrajectory(toolpath)
-      // isPlaying: false and livePlayback.fraction reset alongside
-      // scrubFraction so picking a new job mid-run stops the clock instead
-      // of animating a stale position against a fresh trajectory.
+      // isPlaying/playbackStarted: false and livePlayback.fraction reset
+      // alongside scrubFraction so picking a new job mid-run stops the
+      // clock instead of animating a stale position against a fresh
+      // trajectory, and hides the scrub bar again until Play is pressed
+      // for this job.
       get().livePlayback.fraction = 0
       get().clearManualJog()
       set({
@@ -364,6 +378,7 @@ export const useCellStore = create<CellState>((set, get) => {
         lastRailPos: trajectory.railPos,
         scrubFraction: 0,
         isPlaying: false,
+        playbackStarted: false,
         lastSelectSampleOrigin: origin,
       })
     } catch (err) {
@@ -378,6 +393,7 @@ export const useCellStore = create<CellState>((set, get) => {
         toolpath: null,
         trajectory: null,
         isPlaying: false,
+        playbackStarted: false,
         scrubFraction: 0,
         lastSelectSampleOrigin: origin,
       })
@@ -409,9 +425,10 @@ export const useCellStore = create<CellState>((set, get) => {
       // Pressing Play means "run the toolpath" — it must take the robot back
       // off manual command (quick 260816-m6d).
       get().clearManualJog()
-      set({ isPlaying: true })
+      set({ isPlaying: true, playbackStarted: true })
     },
     pause: () => set({ isPlaying: false }),
+    playbackStarted: false,
     livePlayback: { fraction: 0 },
     selectSample: (sampleId, origin = 'manual') => loadJobSource({ kind: 'sample', sampleId }, origin),
     manualJog: null,
@@ -469,6 +486,7 @@ export const useCellStore = create<CellState>((set, get) => {
           toolpath: null,
           trajectory: null,
           isPlaying: false,
+          playbackStarted: false,
           scrubFraction: 0,
           lastSelectSampleOrigin: origin,
         })

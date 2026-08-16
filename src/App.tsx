@@ -7,6 +7,7 @@ import SceneStatusOverlay from './ui/SceneStatusOverlay'
 import TabRail from './ui/shell/TabRail'
 import TabPanel from './ui/shell/TabPanel'
 import useModeJobSync from './ui/useModeJobSync'
+import { useCellStore } from './store/cellStore'
 
 function App() {
   // G-04-1 gap closure, superseded by quick 260816-m6d's useModeJobSync:
@@ -15,6 +16,12 @@ function App() {
   // hook's own header comment for why this crossing lives here rather than
   // inside uiShellStore's setCellMode.
   useModeJobSync()
+
+  // Quick 260816-m6d: the scrub/timeline bar stays unmounted until the user
+  // presses Play for the current job — its appearance reads as the timeline
+  // unlocking rather than the layout reflowing somewhere else, since it
+  // mounts in the same overlay position beneath the Play button.
+  const playbackStarted = useCellStore((state) => state.playbackStarted)
 
   return (
     <>
@@ -44,7 +51,7 @@ function App() {
       >
         <SampleSelect />
         <PlaybackControl />
-        <ScrubControl />
+        {playbackStarted && <ScrubControl />}
       </div>
       <div
         style={{
