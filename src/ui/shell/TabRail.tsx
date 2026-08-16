@@ -1,13 +1,12 @@
-import { LayoutDashboard, Printer, Drill, type LucideIcon } from 'lucide-react'
+import { LayoutDashboard, type LucideIcon } from 'lucide-react'
 import { TAB_DEFS, type TabId } from '../tabs/tab-registry'
 import { useUiShellStore } from '../../store/uiShellStore'
 
 // One icon per registry id — kept as a lookup keyed by TabId (not a second
 // hardcoded tab list) so TypeScript fails the build if a registry id is
-// ever added without an icon behind it.
+// ever added without an icon behind it. U-5 revert (quick 260816-nup): the
+// printer/drill icons moved with Printing/Milling back to `ModeBar.tsx`.
 const TAB_ICONS: Record<TabId, LucideIcon> = {
-  printing: Printer,
-  milling: Drill,
   dashboard: LayoutDashboard,
 }
 
@@ -60,6 +59,12 @@ const activeBarStyle: React.CSSProperties = {
  * button per tab. Clicking dispatches `setActiveTab` and nothing else; this
  * component never imports from `src/scene/`, matching the convention every
  * existing control in `src/ui/` documents.
+ *
+ * U-5 revert (quick 260816-nup): with `TAB_DEFS` down to a single
+ * Dashboard entry and `setActiveTab` now a TOGGLE (`uiShellStore.ts`), the
+ * button's semantics are `aria-pressed` (is the panel open?) rather than
+ * `aria-current` (which of several destinations is active?) — there is
+ * only one destination now, so the meaningful state is open/closed.
  */
 export default function TabRail() {
   const activeTab = useUiShellStore((state) => state.activeTab)
@@ -69,16 +74,16 @@ export default function TabRail() {
     <nav style={railStyle} aria-label="Cell interface tabs">
       {TAB_DEFS.map((tab) => {
         const Icon = TAB_ICONS[tab.id]
-        const active = tab.id === activeTab
+        const open = tab.id === activeTab
         return (
           <button
             key={tab.id}
             type="button"
-            style={tabButtonStyle(active)}
-            aria-current={active ? 'page' : undefined}
+            style={tabButtonStyle(open)}
+            aria-pressed={open}
             onClick={() => setActiveTab(tab.id)}
           >
-            {active && <span aria-hidden="true" style={activeBarStyle} />}
+            {open && <span aria-hidden="true" style={activeBarStyle} />}
             <Icon size={20} aria-hidden="true" />
             <span>{tab.label}</span>
           </button>

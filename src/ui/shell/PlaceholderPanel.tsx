@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 
 // Shared presentational primitives every panel under `src/ui/tabs/` composes
-// from (quick 260816-m6d: now three panels — Printing/Milling's `JobPanel`
-// and `DashboardPanel` — pruned from the original seven), so they stay
-// visually consistent and none of them invents its own one-off styling.
-// Inline `React.CSSProperties` objects referencing the `--ui-*` /
-// `--space-*` / `--text-*` custom properties, exactly as `SampleSelect.tsx`
-// and `ScrubControl.tsx` already do — no CSS-module or styled-components
-// layer.
+// from. Pruned from the original seven placeholder tabs down to three
+// (quick 260816-m6d: Printing/Milling's `JobPanel` and `DashboardPanel`),
+// then down to one (quick 260816-nup, U-5: `JobPanel` deleted, its
+// per-mode job controls moved into `src/ui/shell/ModeBar.tsx`; only
+// `DashboardPanel` still backs a docked panel now). Inline
+// `React.CSSProperties` objects referencing the `--ui-*` / `--space-*` /
+// `--text-*` custom properties, exactly as `SampleSelect.tsx` and
+// `ScrubControl.tsx` already do — no CSS-module or styled-components layer.
 
 const panelShellStyle: React.CSSProperties = {
   display: 'flex',
