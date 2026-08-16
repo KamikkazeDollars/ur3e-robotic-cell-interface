@@ -1,12 +1,14 @@
-// U-4: mechanical proof that the rail track's visible length genuinely
-// carries the carriage (and the robot standing on it) at both travel
-// extremes, not just a prose claim. Reads the real scene module (same
-// import-a-tsx-module-under-node-env pattern `src/gcode/toolpath-anchor.test.ts`
-// already relies on — this repo's Vitest runs `environment: 'node'`, so a
-// plain module import is enough; nothing here needs jsdom/canvas).
+// U-4 / quick 260816-qym U-2: mechanical proof that the rail track's
+// visible length genuinely carries the carriage AND the robot standing on
+// it at both travel extremes, not just a prose claim. Reads the real scene
+// module (same import-a-tsx-module-under-node-env pattern
+// `src/gcode/toolpath-anchor.test.ts` already relies on — this repo's
+// Vitest runs `environment: 'node'`, so a plain module import is enough;
+// nothing here needs jsdom/canvas).
 import { describe, it, expect } from 'vitest'
 import { RAIL_TRAVEL } from '../kinematics'
-import { TRACK_LENGTH, TRACK_END_MARGIN, CARRIAGE_BASE_WIDTH, RIG_FOOTPRINT_WIDTH } from './RailRig'
+import { TRACK_LENGTH, TRACK_END_MARGIN, TRACK_OVERHANG, CARRIAGE_BASE_WIDTH, RIG_FOOTPRINT_WIDTH } from './RailRig'
+import { ROBOT_FOOTPRINT_HALF_WIDTH_X } from './robot-footprint'
 
 describe('U-4: rail track length carries the carriage at both travel extremes', () => {
   it('RAIL_TRAVEL is unchanged — the logical ±1.5m travel range did not move', () => {
@@ -14,14 +16,27 @@ describe('U-4: rail track length carries the carriage at both travel extremes', 
     expect(RAIL_TRAVEL.max).toBe(1.5)
   })
 
-  it('at the travel extreme, the carriage outer edge still has at least TRACK_END_MARGIN of track under it', () => {
+  // Quick 260816-qym (U-2): the two assertions below replace the previous
+  // carriage-derived ones (`CARRIAGE_BASE_WIDTH / 2 + TRACK_END_MARGIN`),
+  // which described the mounting PLATE's own half-width, not the robot's
+  // real reach — the root cause of the still-reported overhang defect after
+  // the first fix attempt. `TRACK_OVERHANG` now derives from the robot's
+  // measured worst-case footprint (`ROBOT_FOOTPRINT_HALF_WIDTH_X`,
+  // `./robot-footprint.ts`) instead.
+
+  it('at the travel extreme, the track extends at least ROBOT_FOOTPRINT_HALF_WIDTH_X + TRACK_END_MARGIN past the limit — the robot itself, not just the carriage plate, stays over the track', () => {
     expect(TRACK_LENGTH / 2 - RAIL_TRAVEL.max).toBeGreaterThanOrEqual(
-      CARRIAGE_BASE_WIDTH / 2 + TRACK_END_MARGIN,
+      ROBOT_FOOTPRINT_HALF_WIDTH_X + TRACK_END_MARGIN,
     )
   })
 
-  it('TRACK_END_MARGIN is generous, not the bare minimum U-4 rejected', () => {
-    expect(TRACK_END_MARGIN).toBeGreaterThanOrEqual(0.25)
+  it('TRACK_OVERHANG is strictly greater than the superseded carriage-derived figure (CARRIAGE_BASE_WIDTH/2 + 0.3) — this specific regression cannot come back', () => {
+    const supersededOverhang = CARRIAGE_BASE_WIDTH / 2 + 0.3
+    expect(TRACK_OVERHANG).toBeGreaterThan(supersededOverhang)
+  })
+
+  it('TRACK_END_MARGIN sits on top of the measured footprint rather than standing alone', () => {
+    expect(TRACK_OVERHANG - TRACK_END_MARGIN).toBeCloseTo(ROBOT_FOOTPRINT_HALF_WIDTH_X, 10)
   })
 
   it('TRACK_LENGTH is strictly longer than the "carriage only just fits" case that produced the reported defect', () => {
