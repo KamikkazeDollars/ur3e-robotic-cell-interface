@@ -51,21 +51,21 @@ describe('jointLimitsDegrees', () => {
 
 describe('railLimitsMillimetres', () => {
   it('derives millimetre limits from RAIL_TRAVEL', () => {
-    expect(railLimitsMillimetres()).toEqual({ min: -1300, max: 1300 });
+    expect(railLimitsMillimetres()).toEqual({ min: -1095, max: 1095 });
   });
 });
 
 describe('clampRailMillimetres', () => {
   it('clamps above-range, below-range, and in-range millimetre values', () => {
-    expect(clampRailMillimetres(9999)).toBe(1300);
-    expect(clampRailMillimetres(-9999)).toBe(-1300);
+    expect(clampRailMillimetres(9999)).toBe(1095);
+    expect(clampRailMillimetres(-9999)).toBe(-1095);
     expect(clampRailMillimetres(250)).toBe(250);
   });
 });
 
 describe('millimetresToMetres / metresToMillimetres', () => {
-  it('round-trips 1300mm / 1.3m', () => {
-    expect(millimetresToMetres(1300)).toBe(1.3);
-    expect(metresToMillimetres(1.3)).toBe(1300);
+  it('round-trips 1095mm / 1.095m', () => {
+    expect(millimetresToMetres(1095)).toBe(1.095);
+    expect(metresToMillimetres(1.095)).toBe(1095);
   });
 });
