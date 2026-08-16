@@ -524,9 +524,15 @@ describe('useCellStore — lastRailPos fallback (04-REVIEW CR-01)', () => {
   })
 })
 
-describe('useCellStore — manualJog (quick 260816-m6d)', () => {
+describe('useCellStore — manualJog (quick 260816-m6d, gated per quick 260816-nup)', () => {
   beforeEach(() => {
-    useCellStore.setState({ manualJog: null, trajectory: null, lastRailPos: RAIL_CENTER_X })
+    useCellStore.setState({
+      manualJog: null,
+      manualJogError: null,
+      trajectory: null,
+      lastRailPos: RAIL_CENTER_X,
+    })
+    useUiShellStore.setState({ cellMode: 'printing' })
   })
 
   it('starts at null', () => {
@@ -538,9 +544,18 @@ describe('useCellStore — manualJog (quick 260816-m6d)', () => {
     expect(useCellStore.getState().manualJog?.joints[0]).toBe(UR3E_JOINT_LIMITS[0].max)
   })
 
-  it("setManualJointAngle honours the elbow's narrower limit (index 2)", () => {
+  it("setManualJointAngle honours the elbow's narrower limit (index 2) at the CLAMP layer, but the STORE refuses the resulting commit (quick 260816-nup, U-1)", () => {
+    // The elbow clamp itself still produces UR3E_JOINT_LIMITS[2].max — that
+    // coverage already lives in joint-clamp.test.ts. What changed: the
+    // elbow's own mechanical travel limit (pi) coincides EXACTLY with the
+    // elbow singularity (classifySingularity's own documented condition),
+    // so the new manual-pose-safety gate refuses this commit. This is
+    // expected, not a regression — manualJog stays untouched (still null,
+    // since this is the store's first manual-jog call) and manualJogError
+    // is set.
     useCellStore.getState().setManualJointAngle(2, 4)
-    expect(useCellStore.getState().manualJog?.joints[2]).toBe(UR3E_JOINT_LIMITS[2].max)
+    expect(useCellStore.getState().manualJog).toBeNull()
+    expect(useCellStore.getState().manualJogError).not.toBeNull()
   })
 
   it('setManualRailPos(99) lands on RAIL_TRAVEL.max', () => {
@@ -569,9 +584,14 @@ describe('useCellStore — manualJog (quick 260816-m6d)', () => {
   it('each setter produces a new tuple reference on every call', () => {
     useCellStore.getState().setManualJointAngle(0, 0.1)
     const firstJoints = useCellStore.getState().manualJog?.joints
-    useCellStore.getState().setManualJointAngle(1, 0.2)
+    // index 5 (wrist_3) rotates about its own tool axis and moves no frame
+    // origin (quick 260816-nup: index 1, shoulder_lift, now drives the arm
+    // into the floor/carriage and is refused — this is a geometrically
+    // inert second write instead).
+    useCellStore.getState().setManualJointAngle(5, 0.2)
     const secondJoints = useCellStore.getState().manualJog?.joints
     expect(secondJoints).not.toBe(firstJoints)
+    expect(useCellStore.getState().manualJogError).toBeNull()
   })
 
   it('clearManualJog() is a no-op (no re-render churn) when manualJog is already null', () => {
@@ -579,6 +599,71 @@ describe('useCellStore — manualJog (quick 260816-m6d)', () => {
     useCellStore.getState().clearManualJog()
     const after = useCellStore.getState()
     expect(after).toBe(before)
+  })
+})
+
+describe('useCellStore — manualJogError (quick 260816-nup, U-1/U-2/U-3)', () => {
+  beforeEach(() => {
+    useCellStore.setState({
+      manualJog: null,
+      manualJogError: null,
+      trajectory: null,
+      lastRailPos: RAIL_CENTER_X,
+    })
+    useUiShellStore.setState({ cellMode: 'printing' })
+  })
+
+  it('starts at null', () => {
+    expect(useCellStore.getState().manualJogError).toBeNull()
+  })
+
+  it('a refused commit leaves manualJog referentially identical to what it was before the call', () => {
+    // Accept a first, valid entry (wrist_3, geometrically inert).
+    useCellStore.getState().setManualJointAngle(5, 0.2)
+    const before = useCellStore.getState().manualJog
+    expect(before).not.toBeNull()
+
+    // Then attempt a refused entry (elbow clamped onto its limit, which
+    // coincides with the elbow singularity).
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJog).toBe(before)
+  })
+
+  it('a refused commit sets a non-empty manualJogError', () => {
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJogError).not.toBeNull()
+    expect(useCellStore.getState().manualJogError?.length).toBeGreaterThan(0)
+  })
+
+  it('the next accepted commit clears manualJogError back to null', () => {
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJogError).not.toBeNull()
+
+    useCellStore.getState().setManualJointAngle(5, 0.2)
+    expect(useCellStore.getState().manualJogError).toBeNull()
+  })
+
+  it('clearManualJog() clears a set manualJogError', () => {
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJogError).not.toBeNull()
+
+    useCellStore.getState().clearManualJog()
+    expect(useCellStore.getState().manualJogError).toBeNull()
+  })
+
+  it('play() clears a set manualJogError (it already routes through clearManualJog)', () => {
+    useCellStore.getState().setManualJointAngle(2, 4)
+    expect(useCellStore.getState().manualJogError).not.toBeNull()
+
+    useCellStore.getState().play()
+    expect(useCellStore.getState().manualJogError).toBeNull()
+    useCellStore.setState({ isPlaying: false })
+  })
+
+  it('ordinary out-of-range input that clamps to a still-valid pose leaves manualJogError null — clamping is not an error', () => {
+    useCellStore.getState().setManualJointAngle(0, 10)
+    expect(useCellStore.getState().manualJog?.joints[0]).toBe(UR3E_JOINT_LIMITS[0].max)
+    expect(useCellStore.getState().manualJogError).toBeNull()
   })
 })
 

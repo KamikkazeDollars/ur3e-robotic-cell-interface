@@ -10,6 +10,7 @@ import {
   UR3E_PARKED_POSE,
   type JointAngles,
 } from '../kinematics'
+import { validateManualPose } from '../collision'
 import { useUiShellStore } from './uiShellStore'
 import type { CellMode } from '../cell-mode'
 
@@ -214,6 +215,12 @@ interface CellState {
    * `trajectory`/`livePlayback` above.
    */
   manualJog: { joints: JointAngles; railPos: number } | null
+  /** U-3 (quick 260816-nup): holds the message for the most recent REFUSED
+   * manual entry. Cleared by the next ACCEPTED commit and by
+   * `clearManualJog`. A human-cadence field (set at most once per typed
+   * entry), not a per-frame value, so it belongs in this store under the
+   * file header's own rule — same rationale as `manualJog` itself. */
+  manualJogError: string | null
   /** Seeds `manualJog` from `UR3E_PARKED_POSE` and the current rail position
    * when it is currently null, then writes the clamped angle into the
    * indexed slot of a NEW tuple — never mutates the existing one, since
@@ -223,8 +230,9 @@ interface CellState {
    * `RAIL_TRAVEL` via `clampRailPosition`. */
   setManualRailPos: (metres: number) => void
   /** Returns `manualJog` to `null`, handing control back to the compiled
-   * trajectory. Only calls `set()` when it is not already null, so a
-   * repeated call cannot churn subscribers. */
+   * trajectory, and clears `manualJogError`. Only calls `set()` when either
+   * field is not already at its cleared value, so a repeated call cannot
+   * churn subscribers. */
   clearManualJog: () => void
   /** Per-mode uploaded job, `null` when that mode has no upload active
    * (quick 260816-m6d). Keyed per `CellMode` so a file uploaded on one tab
@@ -400,6 +408,35 @@ export const useCellStore = create<CellState>((set, get) => {
     }
   }
 
+  /**
+   * U-1/U-2/U-3 (quick 260816-nup): the ONLY gate `setManualJointAngle`/
+   * `setManualRailPos` commit through. Adds validation ON TOP of the
+   * existing clamping above — `clampJointAngle`/`clampRailPosition`
+   * behaviour is unchanged and stays exactly where it is; this runs AFTER
+   * clamping, against the already-clamped candidate.
+   *
+   * Resolves the bench's current station the same way `loadJobSource`
+   * already reads `cellMode` — via `getState()`, never a subscription, so
+   * this store never acquires a React-style dependency on another store.
+   *
+   * Verdict not ok: writes `manualJogError` and returns WITHOUT writing
+   * `manualJog` at all, so the previously committed pose survives
+   * untouched and every subscriber (`RobotPose`, `CellScene`'s rail
+   * selector, `DashboardPanel`'s value props) keeps reading the last valid
+   * pose. This is the whole revert mechanism (U-3) — nothing else reverts
+   * anything.
+   * Verdict ok: writes `manualJog` and clears `manualJogError`.
+   */
+  function commitManualJog(next: { joints: JointAngles; railPos: number }): void {
+    const workbenchX = toolpathAnchorForMode(useUiShellStore.getState().cellMode).x
+    const verdict = validateManualPose(next.joints, next.railPos, workbenchX)
+    if (!verdict.ok) {
+      set({ manualJogError: verdict.message })
+      return
+    }
+    set({ manualJog: next, manualJogError: null })
+  }
+
   return {
     resetToken: 0,
     requestCameraReset: () => set((state) => ({ resetToken: state.resetToken + 1 })),
@@ -432,6 +469,7 @@ export const useCellStore = create<CellState>((set, get) => {
     livePlayback: { fraction: 0 },
     selectSample: (sampleId, origin = 'manual') => loadJobSource({ kind: 'sample', sampleId }, origin),
     manualJog: null,
+    manualJogError: null,
     setManualJointAngle: (jointIndex, radians) => {
       const seed = get().manualJog ?? {
         joints: UR3E_PARKED_POSE,
@@ -439,17 +477,19 @@ export const useCellStore = create<CellState>((set, get) => {
       }
       const nextJoints = [...seed.joints] as JointAngles
       nextJoints[jointIndex] = clampJointAngle(jointIndex, radians)
-      set({ manualJog: { joints: nextJoints, railPos: seed.railPos } })
+      commitManualJog({ joints: nextJoints, railPos: seed.railPos })
     },
     setManualRailPos: (metres) => {
       const seed = get().manualJog ?? {
         joints: UR3E_PARKED_POSE,
         railPos: get().trajectory?.railPos ?? get().lastRailPos,
       }
-      set({ manualJog: { joints: seed.joints, railPos: clampRailPosition(metres) } })
+      commitManualJog({ joints: seed.joints, railPos: clampRailPosition(metres) })
     },
     clearManualJog: () => {
-      if (get().manualJog !== null) set({ manualJog: null })
+      if (get().manualJog !== null || get().manualJogError !== null) {
+        set({ manualJog: null, manualJogError: null })
+      }
     },
     uploadedJobs: { printing: null, milling: null },
     loadUploadedGcode: async (mode, fileName, text) => {
