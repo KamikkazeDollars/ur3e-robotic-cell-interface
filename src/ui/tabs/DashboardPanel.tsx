@@ -80,6 +80,21 @@ const overrideRowStyle: CSSProperties = {
   gap: 'var(--space-sm)',
 }
 
+/** U-3 (quick 260816-nup): the manual-jog rejection alert row. Reuses
+ * `inputStyle`'s own surface treatment (`--ui-surface-raised`, `8px`
+ * radius, `1px solid var(--ui-border)`) with `--ui-destructive` for the
+ * text — the token `src/index.css` reserves as distinct from `--ui-accent`
+ * for exactly this purpose. No new colour introduced. */
+const errorRowStyle: CSSProperties = {
+  padding: 'var(--space-sm)',
+  borderRadius: '8px',
+  border: '1px solid var(--ui-border)',
+  background: 'var(--ui-surface-raised)',
+  fontSize: 'var(--text-label)',
+  lineHeight: 'var(--leading-label)',
+  color: 'var(--ui-destructive)',
+}
+
 interface NumberFieldProps {
   label: string
   unit: string
@@ -93,14 +108,29 @@ interface NumberFieldProps {
 /**
  * Controlled numeric input for manual-jog values (quick 260816-m6d). Holds
  * the in-progress text in local state so a partial entry (e.g. "-") never
- * has to round-trip through the store: on change, the draft updates
- * immediately and — when `parseNumericInput` can parse it — the store
- * action dispatches; on blur, the draft is rewritten from the (clamped)
- * `value` prop, so an out-of-range entry visibly snaps to the limit instead
- * of lingering as typed text.
+ * has to round-trip through the store.
+ *
+ * Commit cadence (revised, quick 260816-nup — U-3): `onChange` only updates
+ * the local `draft`; the store action dispatches once, on blur or Enter.
+ * Previously `onCommit` fired on EVERY keystroke, which both flung the arm
+ * through every partial value while typing and made "revert to the last
+ * valid position" unobservable — the field's blur snap-back always rewrote
+ * from whichever partial value had last been accepted, never from the
+ * value the user actually started from. Blur (and Enter, which delegates
+ * to blur) now parses the full `draft` via `parseNumericInput`, commits
+ * once if it parses, then unconditionally resets `draft` from the `value`
+ * prop — the existing snap-back, now also the revert: a refused commit
+ * leaves `value` unchanged, so the field returns to the pose the robot is
+ * actually holding.
  */
 function NumberField({ label, unit, min, max, value, onCommit }: NumberFieldProps) {
   const [draft, setDraft] = useState(() => value.toFixed(1))
+
+  function commitDraft() {
+    const parsed = parseNumericInput(draft)
+    if (parsed !== null) onCommit(parsed)
+    setDraft(value.toFixed(1))
+  }
 
   return (
     <div style={fieldStyle}>
@@ -115,13 +145,11 @@ function NumberField({ label, unit, min, max, value, onCommit }: NumberFieldProp
           type="number"
           aria-label={label}
           value={draft}
-          onChange={(event) => {
-            const text = event.target.value
-            setDraft(text)
-            const parsed = parseNumericInput(text)
-            if (parsed !== null) onCommit(parsed)
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commitDraft}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
           }}
-          onBlur={() => setDraft(value.toFixed(1))}
           style={inputStyle}
         />
         <span style={unitStyle}>{unit}</span>
@@ -149,6 +177,7 @@ function NumberField({ label, unit, min, max, value, onCommit }: NumberFieldProp
  */
 export default function DashboardPanel() {
   const manualJog = useCellStore((state) => state.manualJog)
+  const manualJogError = useCellStore((state) => state.manualJogError)
   const trajectory = useCellStore((state) => state.trajectory)
   const lastRailPos = useCellStore((state) => state.lastRailPos)
   const setManualJointAngle = useCellStore((state) => state.setManualJointAngle)
@@ -162,6 +191,11 @@ export default function DashboardPanel() {
 
   return (
     <PanelShell title="Dashboard">
+      {manualJogError && (
+        <div role="alert" style={errorRowStyle}>
+          {manualJogError}
+        </div>
+      )}
       <PanelSection heading="Joint angles — manual control">
         {JOINT_LABELS.map((label, i) => {
           const limits = jointLimitsDegrees(i)
