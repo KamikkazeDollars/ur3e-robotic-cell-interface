@@ -6,9 +6,9 @@ current_phase: 5
 current_phase_name: Telemetry / Dashboard
 status: planning
 stopped_at: Phase 4 context gathered
-last_updated: "2026-08-15T17:15:34.651Z"
-last_activity: 2026-08-15
-last_activity_desc: Phase 03 execution started
+last_updated: "2026-08-17T11:35:37.992Z"
+last_activity: 2026-08-17
+last_activity_desc: "Completed quick task 260817-jfy: Run tab made read-only (live telemetry, no jog controls); mode bar gated to Run only"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -122,6 +122,7 @@ None yet.
 | 260817-gdv | Split Dashboard into "Run" (renamed) + new "Free Movement" tab (independent copy); gated Play/scrub playback controls to mount only on Run, with a pause-on-leave guard | 2026-08-17 | ac99f21 | [260817-gdv-create-a-new-free-movement-tab-that-copi](./quick/260817-gdv-create-a-new-free-movement-tab-that-copi/) |
 | 260817-iyv | Gated the sample/g-code picker (SampleSelect) to mount only on the Run tab, reusing the showsPlaybackControls predicate from 260817-gdv | 2026-08-17 | 36abb40 | [260817-iyv-gate-the-sampleselect-sample-g-code-pick](./quick/260817-iyv-gate-the-sampleselect-sample-g-code-pick/) |
 | 260817-jfy | Made RunPanel read-only (live joint/rail telemetry, no sliders/inputs/store-writes); manual jog now lives solely on Free Movement; gated the top mode bar (Printing/Milling, mounted tool, job, upload) to Run only | 2026-08-17 | 82a4a54 | [260817-jfy-two-changes-on-the-run-free-movement-tab](./quick/260817-jfy-two-changes-on-the-run-free-movement-tab/) |
+| 9 | Renamed the Free Movement tab label to Manual (id/component/file unchanged) | 2026-08-17 | dde6324 | — |
 
 ## Deferred Items
 
