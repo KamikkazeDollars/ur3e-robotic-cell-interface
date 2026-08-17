@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-13)
 Phase: 5 — Telemetry / Dashboard
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-17 - Completed quick task 260817-gdv: Split Dashboard into "Run" + new "Free Movement" tab, gated playback controls to Run only
+Last activity: 2026-08-17 - Completed quick task 260817-iyv: Gated sample/g-code picker to Run tab only, matching Play/scrub
 
 Progress: [██████████] 100%
 
@@ -120,6 +120,7 @@ None yet.
 | 260816-s4e | Cap RAIL_TRAVEL at ±1300mm, trim rail visual track to ±1400mm (3rd rail-overhang attempt, user-specified numbers), fix grid-alignment ripple effects | 2026-08-16 | 5fc78b9 | [260816-s4e-cap-rail-travel-at-1300mm-trim-rail-visu](./quick/260816-s4e-cap-rail-travel-at-1300mm-trim-rail-visu/) |
 | 260816-srk | Correct enforced rail travel to ±1095mm (4th rail-overhang attempt, user re-tested and refined the number against the trimmed track) | 2026-08-16 | (pending) | [260816-srk-correct-enforced-rail-travel-to-1095mm-w](./quick/260816-srk-correct-enforced-rail-travel-to-1095mm-w/) |
 | 260817-gdv | Split Dashboard into "Run" (renamed) + new "Free Movement" tab (independent copy); gated Play/scrub playback controls to mount only on Run, with a pause-on-leave guard | 2026-08-17 | ac99f21 | [260817-gdv-create-a-new-free-movement-tab-that-copi](./quick/260817-gdv-create-a-new-free-movement-tab-that-copi/) |
+| 260817-iyv | Gated the sample/g-code picker (SampleSelect) to mount only on the Run tab, reusing the showsPlaybackControls predicate from 260817-gdv | 2026-08-17 | 36abb40 | [260817-iyv-gate-the-sampleselect-sample-g-code-pick](./quick/260817-iyv-gate-the-sampleselect-sample-g-code-pick/) |
 
 ## Deferred Items
 
