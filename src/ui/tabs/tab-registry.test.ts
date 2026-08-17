@@ -18,9 +18,9 @@ describe('tab-registry — TAB_DEFS (quick 260817-gdv, Task 2: Run + Free Moveme
     }
   })
 
-  it('labels the two entries "Run" and "Free Movement"', () => {
+  it('labels the two entries "Run" and "Manual"', () => {
     const labels = TAB_DEFS.map((tab) => tab.label)
-    expect(labels).toEqual(['Run', 'Free Movement'])
+    expect(labels).toEqual(['Run', 'Manual'])
   })
 
   it('exports DEFAULT_TAB_ID as one of the registry ids, equal to "run"', () => {

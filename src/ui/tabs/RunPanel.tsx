@@ -42,10 +42,12 @@ const overrideNoteStyle: CSSProperties = {
  * The Recovery section (`Home / Reset Position`) and the override-release
  * button (`Return to toolpath`) were deliberately removed, not overlooked:
  * both dispatch a manual-pose store WRITE, and Run now has no write path at
- * all. Releasing a manual override requires switching to Free Movement (or
- * loading/reselecting a job, which clears `manualJog` on every branch of
- * `loadJobSource`) — see finding F-7, the one judgement call in this quick
- * task, flagged for human confirmation at the end of Task 3.
+ * all. Releasing a manual override requires switching to the Manual tab
+ * (`free-movement` id, `FreeMovementPanel.tsx` — labelled "Manual" as of
+ * quick 260817), or loading/reselecting a job, which clears `manualJog` on
+ * every branch of `loadJobSource` — see finding F-7, the one judgement
+ * call in this quick task, flagged for human confirmation at the end of
+ * Task 3.
  *
  * Deliberately still has no tool-center-point section (DASH-02 descoped —
  * see `.planning/REQUIREMENTS.md`): the cell's flange is bare, so a
@@ -82,7 +84,7 @@ export default function RunPanel() {
       </PanelSection>
       {manualJog && (
         <span style={overrideNoteStyle}>
-          Manual command is currently overriding playback. Switch to Free Movement to release it.
+          Manual command is currently overriding playback. Switch to Manual to release it.
         </span>
       )}
     </PanelShell>

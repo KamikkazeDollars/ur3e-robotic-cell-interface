@@ -11,14 +11,19 @@
  * (`src/ui/shell/ModeBar.tsx`) — they are no longer left-rail tabs.
  *
  * Quick 260817-gdv: the rail now carries two destinations — "Run" (the
- * renamed Dashboard tab; `RunPanel.tsx`) and "Free Movement" (a deliberate
+ * renamed Dashboard tab; `RunPanel.tsx`) and the manual-jog tab (a deliberate
  * copy of Run, started identical and expected to diverge into a distinct
  * manual-jog surface; `FreeMovementPanel.tsx`). The id rename away from the
  * old single-tab name `'dashboard'` is deliberate: a tab labelled "Run"
- * sitting next to a real "Free Movement" sibling must not still be keyed by
+ * sitting next to a real second-tab sibling must not still be keyed by
  * the old dashboard name — `TabId`'s `Record<TabId, _>` usages in
  * `TabRail.tsx`/`TabPanel.tsx` force every call site to be updated together,
  * so the rename cannot be done halfway.
+ *
+ * Quick 260817 (label rename): the id/component/file stay `free-movement` /
+ * `FreeMovementPanel` — only the displayed label changed to "Manual",
+ * which reads more professionally than "Free Movement" while describing
+ * the same manual-jog surface.
  */
 export type TabId = 'run' | 'free-movement'
 
@@ -29,7 +34,7 @@ export interface TabDef {
 
 export const TAB_DEFS: readonly TabDef[] = [
   { id: 'run', label: 'Run' },
-  { id: 'free-movement', label: 'Free Movement' },
+  { id: 'free-movement', label: 'Manual' },
 ]
 
 export const DEFAULT_TAB_ID: TabId = 'run'

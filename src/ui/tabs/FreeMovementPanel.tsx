@@ -1,9 +1,11 @@
-// Free Movement tab (quick 260817-gdv). Starts as a verbatim copy of
-// `RunPanel.tsx`'s component body — its own imports, its own store
-// selectors, its own JSX — deliberately NOT a re-export, wrapper, or alias
-// of `RunPanel`, so the two can be edited apart. This file is the intended
-// home for the future distinct free-movement behaviour Free Movement is
-// meant to grow into; until then it renders identically to Run.
+// Manual tab (id/component/file remain `free-movement`/`FreeMovementPanel`,
+// quick 260817-gdv; displayed label renamed to "Manual" — quick 260817).
+// Starts as a verbatim copy of `RunPanel.tsx`'s component body — its own
+// imports, its own store selectors, its own JSX — deliberately NOT a
+// re-export, wrapper, or alias of `RunPanel`, so the two can be edited
+// apart. This file is the intended home for the future distinct
+// manual-jog behaviour this tab is meant to grow into; until then it
+// renders identically to Run.
 import type { CSSProperties } from 'react'
 import { PanelShell, PanelSection, ReadoutRow } from '../shell/PlaceholderPanel'
 import { Button } from '../../components/ui/button'
@@ -50,7 +52,7 @@ const errorRowStyle: CSSProperties = {
 }
 
 /**
- * Free Movement tab (quick 260817-gdv): a deliberate copy of `RunPanel.tsx`,
+ * Manual tab (quick 260817-gdv, labelled "Manual" as of quick 260817): a deliberate copy of `RunPanel.tsx`,
  * sharing the same `JogControl` widget but living in its own file so it can
  * diverge into a distinct manual-jog surface without touching Run. Same
  * six typed joint angles plus a typed rail position, every entry clamped
@@ -88,7 +90,7 @@ export default function FreeMovementPanel() {
   const railLimits = railLimitsMillimetres()
 
   return (
-    <PanelShell title="Free Movement">
+    <PanelShell title="Manual">
       {manualJogError && (
         <div role="alert" style={errorRowStyle}>
           {manualJogError}
