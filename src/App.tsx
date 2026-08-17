@@ -8,7 +8,9 @@ import TabRail from './ui/shell/TabRail'
 import TabPanel from './ui/shell/TabPanel'
 import ModeBar from './ui/shell/ModeBar'
 import { shellContentLeft } from './ui/shell/shell-geometry'
+import { showsPlaybackControls } from './ui/shell/playback-chrome-visibility'
 import useModeJobSync from './ui/useModeJobSync'
+import usePlaybackTabGuard from './ui/usePlaybackTabGuard'
 import { useCellStore } from './store/cellStore'
 import { useUiShellStore } from './store/uiShellStore'
 
@@ -19,6 +21,13 @@ function App() {
   // hook's own header comment for why this crossing lives here rather than
   // inside uiShellStore's setCellMode.
   useModeJobSync()
+
+  // Quick 260817-gdv (Task 3): mounted alongside useModeJobSync — the other
+  // shell-level crossing between uiShellStore (which tab) and cellStore
+  // (playback state). Pauses the clock when the user navigates away from
+  // Run mid-playback; see the hook's own header for why the transport
+  // controls being unmounted below isn't enough on its own.
+  usePlaybackTabGuard()
 
   // Quick 260816-m6d: the scrub/timeline bar stays unmounted until the user
   // presses Play for the current job — its appearance reads as the timeline
@@ -32,6 +41,12 @@ function App() {
   // offset comes from the same `shellContentLeft` derivation `ModeBar`
   // reads, so the two can never drift apart from each other.
   const panelOpen = useUiShellStore((state) => state.panelOpen)
+
+  // Quick 260817-gdv (Task 3): the toolpath transport (Play/Pause + scrub)
+  // is Run-only. Single flag, derived from the shared predicate — never an
+  // inline tab comparison — and used to gate BOTH transport controls below.
+  const activeTab = useUiShellStore((state) => state.activeTab)
+  const showPlayback = showsPlaybackControls(activeTab)
 
   return (
     <>
@@ -48,7 +63,14 @@ function App() {
           SampleSelect, rather than adding a third fixed container. Offset
           left past the rail (+ panel, when open) using the same
           `shellContentLeft` derivation `ModeBar` reads, so the two layouts
-          can never drift apart. */}
+          can never drift apart.
+
+          Quick 260817-gdv (Task 3): the toolpath transport is Run-only —
+          `SampleSelect` stays mounted on every tab (it picks which job is
+          rendered in the 3D scene regardless of which tab is showing), but
+          `PlaybackControl` and `ScrubControl` are both gated behind
+          `showPlayback`, so on any other tab they are genuinely absent from
+          the DOM, not merely hidden. */}
       <div
         style={{
           position: 'fixed',
@@ -61,8 +83,8 @@ function App() {
         }}
       >
         <SampleSelect />
-        <PlaybackControl />
-        {playbackStarted && <ScrubControl />}
+        {showPlayback && <PlaybackControl />}
+        {showPlayback && playbackStarted && <ScrubControl />}
       </div>
       <div
         style={{
