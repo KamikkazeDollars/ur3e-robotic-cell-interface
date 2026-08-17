@@ -59,7 +59,7 @@ describe('shouldPausePlayback', () => {
   })
 })
 
-describe('App.tsx — playback transport structural guards (quick 260817-gdv, Task 3)', () => {
+describe('App.tsx — playback transport + sample picker structural guards (quick 260817-gdv Task 3, quick 260817-iyv)', () => {
   it('imports showsPlaybackControls', () => {
     const source = readAppSource()
     expect(source).toMatch(/\bshowsPlaybackControls\b/)
@@ -81,5 +81,18 @@ describe('App.tsx — playback transport structural guards (quick 260817-gdv, Ta
   it('guards the ScrubControl mount behind the visibility flag AND playbackStarted', () => {
     const source = stripComments(readAppSource())
     expect(source).toMatch(/\{showPlayback && playbackStarted && <ScrubControl \/>\}/)
+  })
+
+  it('mounts SampleSelect exactly once, guarded by the visibility flag (quick 260817-iyv)', () => {
+    const source = stripComments(readAppSource())
+    const sampleSelectMounts = source.match(/<SampleSelect\b/g) ?? []
+    expect(sampleSelectMounts).toHaveLength(1)
+    expect(source).toMatch(/\{showPlayback && <SampleSelect \/>\}/)
+  })
+
+  it('has no inline tab comparison anywhere — every tab decision routes through showsPlaybackControls (quick 260817-iyv)', () => {
+    const source = stripComments(readAppSource())
+    expect(source).not.toMatch(/activeTab\s*===/)
+    expect(source).not.toMatch(/['"]run['"]/)
   })
 })
