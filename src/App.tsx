@@ -65,12 +65,22 @@ function App() {
           `shellContentLeft` derivation `ModeBar` reads, so the two layouts
           can never drift apart.
 
-          Quick 260817-gdv (Task 3): the toolpath transport is Run-only —
-          `SampleSelect` stays mounted on every tab (it picks which job is
-          rendered in the 3D scene regardless of which tab is showing), but
-          `PlaybackControl` and `ScrubControl` are both gated behind
-          `showPlayback`, so on any other tab they are genuinely absent from
-          the DOM, not merely hidden. */}
+          Quick 260817-iyv: all three children of this overlay — the
+          `SampleSelect` job picker, `PlaybackControl` and `ScrubControl` —
+          are Run-only, gated by the single `showPlayback` flag derived from
+          the shared `showsPlaybackControls` predicate, never an inline tab
+          comparison. On any other tab they are genuinely absent from the
+          DOM, not merely hidden. This deliberately reverses quick
+          260817-gdv's earlier carve-out, which kept the picker mounted on
+          every tab on the reasoning that it selects the job the 3D scene
+          renders regardless of tab; that reasoning no longer applies — the
+          picker is now treated as Run-tab chrome, like the rest of the
+          transport, so this is not an oversight. Gating the picker also
+          withdraws its assumed-unit, skipped-command and frozen-trajectory
+          notes from non-Run tabs, which is intended: those notes annotate
+          the selected job, while the blocking-state channel
+          (`SceneStatusOverlay`) is a separate component that stays mounted
+          on every tab. */}
       <div
         style={{
           position: 'fixed',
@@ -82,7 +92,7 @@ function App() {
           gap: 'var(--space-md)',
         }}
       >
-        <SampleSelect />
+        {showPlayback && <SampleSelect />}
         {showPlayback && <PlaybackControl />}
         {showPlayback && playbackStarted && <ScrubControl />}
       </div>
