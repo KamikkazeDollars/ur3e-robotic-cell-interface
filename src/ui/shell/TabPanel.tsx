@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import { type TabId } from '../tabs/tab-registry'
 import { useUiShellStore } from '../../store/uiShellStore'
-import DashboardPanel from '../tabs/DashboardPanel'
+import RunPanel from '../tabs/RunPanel'
 
 // Typed as `Record<TabId, ComponentType>` so TypeScript itself fails the
 // build if a registry id has no panel behind it (Task 3 gate:
@@ -10,8 +10,12 @@ import DashboardPanel from '../tabs/DashboardPanel'
 // `PrintingPanel`/`MillingPanel` wrappers and the `JobPanel` import are
 // gone along with the mode tabs they backed — see `tab-registry.ts`'s own
 // doc comment.
+//
+// Quick 260817-gdv, Task 1: `DashboardPanel` renamed to `RunPanel` ahead of
+// the two-tab registry landing in Task 2, which adds the `FreeMovementPanel`
+// entry alongside it.
 export const PANELS: Record<TabId, ComponentType> = {
-  dashboard: DashboardPanel,
+  dashboard: RunPanel,
 }
 
 const panelStyle: React.CSSProperties = {
