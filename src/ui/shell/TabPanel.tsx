@@ -1,7 +1,8 @@
 import type { ComponentType } from 'react'
 import { type TabId } from '../tabs/tab-registry'
 import { useUiShellStore } from '../../store/uiShellStore'
-import DashboardPanel from '../tabs/DashboardPanel'
+import RunPanel from '../tabs/RunPanel'
+import FreeMovementPanel from '../tabs/FreeMovementPanel'
 
 // Typed as `Record<TabId, ComponentType>` so TypeScript itself fails the
 // build if a registry id has no panel behind it (Task 3 gate:
@@ -10,8 +11,13 @@ import DashboardPanel from '../tabs/DashboardPanel'
 // `PrintingPanel`/`MillingPanel` wrappers and the `JobPanel` import are
 // gone along with the mode tabs they backed — see `tab-registry.ts`'s own
 // doc comment.
+//
+// Quick 260817-gdv, Task 2: `PANELS` now carries both tabs — `RunPanel`
+// (Task 1's rename of `DashboardPanel`) and `FreeMovementPanel` (Task 1's
+// independent copy), keyed by the widened `TabId`.
 export const PANELS: Record<TabId, ComponentType> = {
-  dashboard: DashboardPanel,
+  run: RunPanel,
+  'free-movement': FreeMovementPanel,
 }
 
 const panelStyle: React.CSSProperties = {
@@ -32,13 +38,17 @@ const panelStyle: React.CSSProperties = {
  * rail/panel pair, so the two can never drift apart from each other (each
  * reads the same `TAB_DEFS`/`activeTab` source of truth).
  *
- * U-5 revert (quick 260816-nup): `activeTab` is now nullable — renders
- * nothing at all (not even the docked container) when no tab is open, so
- * the 3D scene is full width by default.
+ * Quick 260817-gdv (Task 2): `activeTab` is now non-nullable — "closed" is
+ * carried separately by `panelOpen` (`uiShellStore.ts`). Renders nothing at
+ * all (not even the docked container) when `panelOpen` is false, so the 3D
+ * scene is full width by default; when open, renders the CURRENT tab's
+ * panel — closing and reopening the panel while staying on the same tab
+ * does not lose "which tab am I on".
  */
 export default function TabPanel() {
   const activeTab = useUiShellStore((state) => state.activeTab)
-  if (activeTab === null) return null
+  const panelOpen = useUiShellStore((state) => state.panelOpen)
+  if (!panelOpen) return null
 
   const ActivePanel = PANELS[activeTab]
 

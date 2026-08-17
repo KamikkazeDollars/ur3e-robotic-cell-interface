@@ -1,19 +1,5 @@
 import { useState, type CSSProperties } from 'react'
-import { PanelShell, PanelSection, ReadoutRow } from '../shell/PlaceholderPanel'
-import { Button } from '../../components/ui/button'
-import { useCellStore } from '../../store/cellStore'
-import {
-  toRadians,
-  formatMillimetres,
-  jointLimitsDegrees,
-  railLimitsMillimetres,
-  millimetresToMetres,
-} from '../manual-jog'
-import { commitNumberFieldDraft } from '../number-field-commit'
-import { manualJointDegrees, manualRailMillimetres, type ManualPoseReadbackState } from '../manual-pose-readback'
-import { railRemainingTravel } from '../../kinematics'
-
-const JOINT_LABELS = ['Base', 'Shoulder', 'Elbow', 'Wrist 1', 'Wrist 2', 'Wrist 3'] as const
+import { commitNumberFieldDraft } from './number-field-commit'
 
 const fieldStyle: CSSProperties = {
   display: 'flex',
@@ -75,35 +61,7 @@ const rangeInputStyle: CSSProperties = {
   accentColor: 'var(--ui-surface-raised)',
 }
 
-const overrideNoteStyle: CSSProperties = {
-  fontSize: 'var(--text-label)',
-  lineHeight: 'var(--leading-label)',
-  color: 'var(--ui-fg-muted)',
-  fontStyle: 'italic',
-}
-
-const overrideRowStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--space-sm)',
-}
-
-/** U-3 (quick 260816-nup): the manual-jog rejection alert row. Reuses
- * `inputStyle`'s own surface treatment (`--ui-surface-raised`, `8px`
- * radius, `1px solid var(--ui-border)`) with `--ui-destructive` for the
- * text — the token `src/index.css` reserves as distinct from `--ui-accent`
- * for exactly this purpose. No new colour introduced. */
-const errorRowStyle: CSSProperties = {
-  padding: 'var(--space-sm)',
-  borderRadius: '8px',
-  border: '1px solid var(--ui-border)',
-  background: 'var(--ui-surface-raised)',
-  fontSize: 'var(--text-label)',
-  lineHeight: 'var(--leading-label)',
-  color: 'var(--ui-destructive)',
-}
-
-interface JogControlProps {
+export interface JogControlProps {
   label: string
   unit: string
   min: number
@@ -136,7 +94,7 @@ interface JogControlProps {
  * store action dispatches once, on blur or Enter.
  *
  * Drift fix (quick 260816-qym, U-1): the commit body delegates entirely to
- * `commitNumberFieldDraft` (`../number-field-commit.ts`), which reads the
+ * `commitNumberFieldDraft` (`./number-field-commit.ts`), which reads the
  * settled value back from the store live via `readCommitted` rather than
  * closing over this render's own `value` prop — the confirmed stale-closure
  * defect where a successful commit was immediately overwritten by whatever
@@ -178,8 +136,15 @@ interface JogControlProps {
  * `manualJogError` explains why — deliberately no smoothing, deferral, or
  * optimistic local slider state that would let the thumb travel through a
  * refused region.
+ *
+ * Shared widget (quick 260817-gdv): this component moved out of the single
+ * Dashboard panel into its own file so `RunPanel.tsx` and
+ * `FreeMovementPanel.tsx` — two deliberately independent panel copies — can
+ * both use it without forking its stale-closure/commit-cadence fixes. A fix
+ * landed here applies to both panels at once; the panel bodies themselves
+ * are free to diverge.
  */
-function JogControl({ label, unit, min, max, value, onCommit, readCommitted, step }: JogControlProps) {
+export default function JogControl({ label, unit, min, max, value, onCommit, readCommitted, step }: JogControlProps) {
   const [draft, setDraft] = useState(() => value.toFixed(1))
   const [lastValue, setLastValue] = useState(value)
 
@@ -229,105 +194,5 @@ function JogControl({ label, unit, min, max, value, onCommit, readCommitted, ste
         style={rangeInputStyle}
       />
     </div>
-  )
-}
-
-/**
- * Dashboard tab (DASH-01/DASH-03) reworked into a real manual-control
- * surface (quick 260816-m6d, supersedes the Phase 5 static placeholder):
- * six typed joint angles plus a typed rail position, every entry clamped
- * (never rejected) to the real configured limits read from
- * `UR3E_JOINT_LIMITS`/`RAIL_TRAVEL` via the `src/kinematics` barrel and the
- * `src/ui/manual-jog.ts` degrees/mm presentation layer.
- *
- * Deliberately has no tool-center-point section (DASH-02 descoped — see
- * `.planning/REQUIREMENTS.md`): the cell's flange is bare, so a Cartesian/
- * speed readout would describe a tool that does not exist.
- *
- * Displayed joint/rail values always come from `manualJog` when it is
- * non-null, falling back to `UR3E_PARKED_POSE`/the current trajectory or
- * last-known rail position — the numbers on screen are always exactly the
- * numbers that will be (or already are) commanded.
- */
-export default function DashboardPanel() {
-  const manualJog = useCellStore((state) => state.manualJog)
-  const manualJogError = useCellStore((state) => state.manualJogError)
-  const trajectory = useCellStore((state) => state.trajectory)
-  const lastRailPos = useCellStore((state) => state.lastRailPos)
-  const setManualJointAngle = useCellStore((state) => state.setManualJointAngle)
-  const setManualRailPos = useCellStore((state) => state.setManualRailPos)
-  const clearManualJog = useCellStore((state) => state.clearManualJog)
-  const homeManualPose = useCellStore((state) => state.homeManualPose)
-
-  // The reactive snapshot this render's `value` props derive from — the
-  // SAME shape (and, structurally, the same fields) `manual-pose-readback.ts`
-  // reads from `useCellStore.getState()` inside each field's `readCommitted`
-  // closure below (quick 260816-qym, U-1). One selector, two call sites, so
-  // the displayed number and the post-commit read-back can never disagree.
-  const poseState: ManualPoseReadbackState = { manualJog, trajectory, lastRailPos }
-  const railPosMetres = manualJog?.railPos ?? trajectory?.railPos ?? lastRailPos
-  const remaining = railRemainingTravel(railPosMetres)
-  const railLimits = railLimitsMillimetres()
-
-  return (
-    <PanelShell title="Dashboard">
-      {manualJogError && (
-        <div role="alert" style={errorRowStyle}>
-          {manualJogError}
-        </div>
-      )}
-      <PanelSection heading="Joint angles — manual control">
-        {JOINT_LABELS.map((label, i) => {
-          const limits = jointLimitsDegrees(i)
-          return (
-            <JogControl
-              key={label}
-              label={label}
-              unit="°"
-              min={limits.min}
-              max={limits.max}
-              step={0.5}
-              value={manualJointDegrees(poseState, i)}
-              onCommit={(parsedDegrees) => setManualJointAngle(i, toRadians(parsedDegrees))}
-              readCommitted={() => manualJointDegrees(useCellStore.getState(), i)}
-            />
-          )
-        })}
-      </PanelSection>
-      <PanelSection heading="Rail — 7th axis">
-        <JogControl
-          label="Position"
-          unit="mm"
-          min={railLimits.min}
-          max={railLimits.max}
-          step={5}
-          value={manualRailMillimetres(poseState)}
-          onCommit={(parsedMm) => setManualRailPos(millimetresToMetres(parsedMm))}
-          readCommitted={() => manualRailMillimetres(useCellStore.getState())}
-        />
-        <ReadoutRow label="Travel remaining (−X) (mm)" value={formatMillimetres(remaining.negative)} />
-        <ReadoutRow label="Travel remaining (+X) (mm)" value={formatMillimetres(remaining.positive)} />
-      </PanelSection>
-      <PanelSection heading="Recovery">
-        {/* Quick 260816-qym (U-4): always visible/enabled, including while
-            a job is playing or paused — recovering a robot mid-run is the
-            entire point. Dispatches homeManualPose, the SAME
-            commitManualJog/validateManualPose gated path every other
-            manual-jog write uses; distinct from "Return to toolpath" below
-            (one hands control back to the trajectory, one parks the
-            robot) — both are wanted, so both stay. */}
-        <Button variant="secondary" onClick={() => homeManualPose()}>
-          Home / Reset Position
-        </Button>
-      </PanelSection>
-      {manualJog && (
-        <div style={overrideRowStyle}>
-          <span style={overrideNoteStyle}>Manual command is currently overriding playback.</span>
-          <Button variant="secondary" onClick={() => clearManualJog()}>
-            Return to toolpath
-          </Button>
-        </div>
-      )}
-    </PanelShell>
   )
 }

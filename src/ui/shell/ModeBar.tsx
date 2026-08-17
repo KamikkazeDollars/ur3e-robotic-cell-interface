@@ -122,7 +122,12 @@ const hiddenInputStyle: React.CSSProperties = {
 export default function ModeBar() {
   const cellMode = useUiShellStore((state) => state.cellMode)
   const setCellMode = useUiShellStore((state) => state.setCellMode)
-  const panelOpen = useUiShellStore((state) => state.activeTab !== null)
+  // Quick 260817-gdv (Task 2): read straight from the store now that
+  // `panelOpen` is its own field, rather than deriving it from a
+  // (now-removed) null check on `activeTab`. Still fed into the SAME
+  // `shellContentLeft(...)` derivation `App.tsx`'s overlay column reads, so
+  // the two offsets can never drift apart.
+  const panelOpen = useUiShellStore((state) => state.panelOpen)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const [lastUploadTooLarge, setLastUploadTooLarge] = useState(false)

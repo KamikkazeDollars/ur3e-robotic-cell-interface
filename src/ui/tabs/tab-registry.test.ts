@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { TAB_DEFS, DEFAULT_TAB_ID } from './tab-registry'
 import { PANELS } from '../shell/TabPanel'
 
-describe('tab-registry — TAB_DEFS (quick 260816-nup, U-5 revert)', () => {
-  it('contains exactly 1 entry', () => {
-    expect(TAB_DEFS).toHaveLength(1)
+describe('tab-registry — TAB_DEFS (quick 260817-gdv, Task 2: Run + Free Movement)', () => {
+  it('contains exactly 2 entries', () => {
+    expect(TAB_DEFS).toHaveLength(2)
   })
 
-  it('has an id of exactly "dashboard"', () => {
+  it('has ids exactly ["run", "free-movement"]', () => {
     const ids = TAB_DEFS.map((tab) => tab.id)
-    expect(ids).toEqual(['dashboard'])
+    expect(ids).toEqual(['run', 'free-movement'])
   })
 
   it('gives every entry a non-empty label', () => {
@@ -18,9 +18,15 @@ describe('tab-registry — TAB_DEFS (quick 260816-nup, U-5 revert)', () => {
     }
   })
 
-  it('exports DEFAULT_TAB_ID as one of the registry ids', () => {
+  it('labels the two entries "Run" and "Free Movement"', () => {
+    const labels = TAB_DEFS.map((tab) => tab.label)
+    expect(labels).toEqual(['Run', 'Free Movement'])
+  })
+
+  it('exports DEFAULT_TAB_ID as one of the registry ids, equal to "run"', () => {
     const ids = TAB_DEFS.map((tab) => tab.id)
     expect(ids).toContain(DEFAULT_TAB_ID)
+    expect(DEFAULT_TAB_ID).toBe('run')
   })
 
   // The gate that keeps the rail and the panel set from drifting apart —
@@ -43,5 +49,15 @@ describe('tab-registry — TAB_DEFS (quick 260816-nup, U-5 revert)', () => {
     const ids = TAB_DEFS.map((tab) => tab.id)
     expect(ids).not.toContain('printing')
     expect(ids).not.toContain('milling')
+  })
+
+  // Quick 260817-gdv regression guard: the id rename from the single-tab
+  // 'dashboard' era is deliberate — a future edit must not quietly restore
+  // the old dashboard name as either an id or a label.
+  it('contains neither the old dashboard id nor the old dashboard label', () => {
+    const ids = TAB_DEFS.map((tab) => tab.id)
+    const labels = TAB_DEFS.map((tab) => tab.label)
+    expect(ids).not.toContain('dashboard')
+    expect(labels).not.toContain('Dashboard')
   })
 })
