@@ -4,6 +4,11 @@
 // its own tab comparison. Data only — no JSX, no React import — matching
 // `shell-geometry.ts`'s convention so `playback-chrome-visibility.test.ts`
 // can import it without a DOM.
+//
+// Quick 260817-iyv extended this rule to the sample/g-code picker
+// (SampleSelect), and quick 260817-jfy extended it again to the top-of-scene
+// mode bar (Printing/Milling toggle, mounted-tool chip, job label, upload
+// control) — all Run-only chrome governed by this same predicate.
 import { TAB_DEFS, type TabId } from '../tabs/tab-registry'
 
 const RUN_TAB_ID: TabId = 'run'
