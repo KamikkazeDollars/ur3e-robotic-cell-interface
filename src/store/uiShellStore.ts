@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TabId } from '../ui/tabs/tab-registry'
+import { DEFAULT_TAB_ID, type TabId } from '../ui/tabs/tab-registry'
 import type { CellMode } from '../cell-mode'
 
 /** Which mode the cell is set to — drives `ModeBar`'s segmented control and
@@ -45,24 +45,47 @@ export type { CellMode }
  * Dashboard entry, that coupling has no tab left to live on — `cellMode`
  * dispatch is once again ONLY `setCellMode`, called directly by `ModeBar`.
  *
- * `activeTab` is now `TabId | null`, defaulting to `null`: with
- * Printing/Milling no longer tabs, a permanently-docked single-tab panel
- * would keep eating scene width for no navigational reason, so the one
- * remaining tab is a TOGGLE (`setActiveTab` re-selecting the already-active
- * tab closes it) and the app opens on the full-width scene, exactly as it
- * did before the tab rail existed at all.
+ * Quick 260817-gdv (Task 2) — tab identity split from panel-open: with a
+ * second real tab landing (Free Movement, alongside the renamed Run), the
+ * old nullable `activeTab | null` design (U-5) stopped working: it
+ * conflated "which tab am I on" with "is the docked panel showing", so
+ * closing the panel would also mean "on no tab" — which the Task 3
+ * playback-visibility gate (`showsPlaybackControls(activeTab)`) needs to
+ * answer unambiguously, and which would otherwise silently strip the Play
+ * button from the app's default opening state. `activeTab` is now a
+ * non-nullable `TabId`, defaulting to `DEFAULT_TAB_ID` ('run'), and a
+ * separate `panelOpen: boolean` (default `false`) carries the docked-panel
+ * toggle that `activeTab | null` used to encode. Net effect: the app still
+ * opens on a full-width scene (panelOpen starts false) WITH the Play button
+ * available (activeTab starts 'run'), and "which tab am I on" is now a
+ * testable input independent of whether the panel happens to be open.
+ *
+ * `setActiveTab(id)`:
+ * - same id as the current `activeTab` -> TOGGLE `panelOpen` only (matches
+ *   the old toggle-to-close behaviour for the tab you're already on).
+ * - different id -> switch `activeTab` to it AND force `panelOpen` true
+ *   (clicking a different destination always opens the panel on it).
+ *
+ * `cellMode` dispatch is still only `setCellMode` — this split does not
+ * reopen that boundary.
  */
 interface UiShellState {
-  activeTab: TabId | null
+  activeTab: TabId
+  panelOpen: boolean
   setActiveTab: (id: TabId) => void
   cellMode: CellMode
   setCellMode: (mode: CellMode) => void
 }
 
 export const useUiShellStore = create<UiShellState>((set, get) => ({
-  activeTab: null,
+  activeTab: DEFAULT_TAB_ID,
+  panelOpen: false,
   setActiveTab: (id) => {
-    set({ activeTab: get().activeTab === id ? null : id })
+    if (get().activeTab === id) {
+      set({ panelOpen: !get().panelOpen })
+    } else {
+      set({ activeTab: id, panelOpen: true })
+    }
   },
   cellMode: 'printing',
   setCellMode: (mode) => set({ cellMode: mode }),

@@ -26,11 +26,12 @@ function App() {
   // mounts in the same overlay position beneath the Play button.
   const playbackStarted = useCellStore((state) => state.playbackStarted)
 
-  // U-5 revert (quick 260816-nup): the docked panel is now closable
-  // (`activeTab | null`) — this overlay column's left offset comes from
-  // the same `shellContentLeft` derivation `ModeBar` reads, so the two can
-  // never drift apart from each other.
-  const panelOpen = useUiShellStore((state) => state.activeTab !== null)
+  // Quick 260817-gdv (Task 2): read straight from the store now that
+  // `panelOpen` is its own field, rather than deriving it from a
+  // (now-removed) null check on `activeTab`. This overlay column's left
+  // offset comes from the same `shellContentLeft` derivation `ModeBar`
+  // reads, so the two can never drift apart from each other.
+  const panelOpen = useUiShellStore((state) => state.panelOpen)
 
   return (
     <>
