@@ -59,7 +59,7 @@ describe('shouldPausePlayback', () => {
   })
 })
 
-describe('App.tsx — playback transport + sample picker structural guards (quick 260817-gdv Task 3, quick 260817-iyv)', () => {
+describe('App.tsx — playback transport + sample picker structural guards (quick 260817-gdv Task 3, quick 260817-iyv, quick 260817-jfy)', () => {
   it('imports showsPlaybackControls', () => {
     const source = readAppSource()
     expect(source).toMatch(/\bshowsPlaybackControls\b/)
@@ -88,6 +88,13 @@ describe('App.tsx — playback transport + sample picker structural guards (quic
     const sampleSelectMounts = source.match(/<SampleSelect\b/g) ?? []
     expect(sampleSelectMounts).toHaveLength(1)
     expect(source).toMatch(/\{showPlayback && <SampleSelect \/>\}/)
+  })
+
+  it('mounts ModeBar exactly once, guarded by the visibility flag (quick 260817-jfy)', () => {
+    const source = stripComments(readAppSource())
+    const modeBarMounts = source.match(/<ModeBar\b/g) ?? []
+    expect(modeBarMounts).toHaveLength(1)
+    expect(source).toMatch(/\{showPlayback && <ModeBar \/>\}/)
   })
 
   it('has no inline tab comparison anywhere — every tab decision routes through showsPlaybackControls (quick 260817-iyv)', () => {

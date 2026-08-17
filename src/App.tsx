@@ -54,7 +54,15 @@ function App() {
       <SceneStatusOverlay />
       <TabRail />
       <TabPanel />
-      <ModeBar />
+      {/* Quick 260817-jfy: the mode bar (Printing/Milling toggle, mounted-tool
+          chip, job label, upload control) is Run-only chrome for the same
+          reason the job picker below is — it is the job/mode selection
+          surface, not something a Free Movement session needs. Reuses the
+          single shared visibility flag rather than a second predicate.
+          Per-mode job auto-loading is unaffected: useModeJobSync() is
+          mounted at this shell level, not inside the bar, so mode/job
+          loading survives an unmount/remount cycle. */}
+      {showPlayback && <ModeBar />}
       {/* Peripheral overlay, `lg` (24px) padding from the viewport edges — a
           secondary control that must not compete with the robot for
           attention (UI-SPEC "Color" visual-focal-point rule). Mirrors the
